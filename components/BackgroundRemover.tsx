@@ -177,14 +177,12 @@ export default function BackgroundRemover(): JSX.Element {
             {inputFile && outputFileURL && (
                 <div className="mx-auto border p-4 rounded-lg flex gap-4 ease-in-out my-2 transition-all flex-wrap justify-center">
                     <ImgComparisonSlider className="rounded-lg focus-visible:border-0">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                         slot="first"
                             src={URL.createObjectURL(inputFile)}
                             alt="Before"
                             className="max-h-96 shadow-sm rounded-lg"
                         />
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                         slot="second"
                             src={outputFileURL}
