@@ -3,6 +3,7 @@ import "./globals.css"
 import { ThemeProvider } from "next-themes"
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://rembg.io'),
   title: "Remove Background from Image for Free – RemBG.io",
   description: "Remove background from images instantly with AI. 100% automatic, free, and works offline in your browser. No uploads, no registration required. Perfect for product photos, portraits, and marketing materials.",
   keywords: [
