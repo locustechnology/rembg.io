@@ -26,15 +26,18 @@ const nextConfig = {
       fs: false,
     };
 
-    // Configure Terser to handle import.meta syntax
+    // Exclude ONNX files from minification to avoid import.meta issues
     if (!isServer) {
       config.optimization.minimizer = config.optimization.minimizer.map(plugin => {
         if (plugin.constructor.name === 'TerserPlugin') {
-          plugin.options.terserOptions = {
-            ...plugin.options.terserOptions,
-            ecma: 2020,
-            module: true,
-          };
+          plugin.options.exclude = [
+            /ort.*\.js$/,
+            /ort.*\.mjs$/,
+            /webgpu.*\.js$/,
+            /webgpu.*\.mjs$/,
+            /onnx.*\.js$/,
+            /onnx.*\.mjs$/,
+          ];
         }
         return plugin;
       });
