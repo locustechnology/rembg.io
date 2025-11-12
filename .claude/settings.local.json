@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install)",
+      "Bash(npm run dev:*)",
+      "Bash(npm run build:*)",
+      "Bash(set NEXT_PUBLIC_SUPABASE_URL=https://cctmavwcdsqwkaeonqfk.supabase.co:*)",
+      "Bash(set SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNjdG1hdndjZHNxd2thZW9ucWZrIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MjI3OTczNCwiZXhwIjoyMDc3ODU1NzM0fQ.cBHLITkbWv1FAJORSm-Q6pqn0QDV1GMhYekjWH_0GPw)",
+      "Bash(node test-db.js:*)",
+      "Bash(curl:*)",
+      "Bash(npm install:*)",
+      "Bash(pkill node:*)",
+      "Bash(taskkill:*)",
+      "Bash(cat:*)",
+      "Bash(node test-resend.js:*)",
+      "Bash(nul)",
+      "Bash(timeout /T 2)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

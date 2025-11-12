@@ -1,6 +1,13 @@
 import type { Metadata } from "next"
 import "./globals.css"
 import { ThemeProvider } from "next-themes"
+import { Inter } from 'next/font/google'
+
+const inter = Inter({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-inter',
+})
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://rembg.io'),
@@ -90,14 +97,14 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" suppressHydrationWarning={true}>
+    <html lang="en" suppressHydrationWarning={true} className={inter.variable}>
       <head>
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
       </head>
-      <body>
+      <body className={inter.className}>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
