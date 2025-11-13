@@ -14,7 +14,7 @@ export default function BackgroundRemover({
   inputFile,
   outputFileURL,
   imageDownloadType,
-}: BackgroundRemoverProps): JSX.Element {
+}: BackgroundRemoverProps): JSX.Element | null {
 
   const fileName = () => {
     let nameWithoutExtention = inputFile?.name;

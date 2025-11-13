@@ -95,12 +95,14 @@ export default function LoginPage() {
 
       // OTP verified and session created successfully
       console.log("Login successful, redirecting to home...");
+      console.log("Response data:", data);
 
-      // Small delay to ensure cookie is set
-      await new Promise(resolve => setTimeout(resolve, 100));
+      // Longer delay to ensure cookie is properly set
+      await new Promise(resolve => setTimeout(resolve, 500));
 
-      router.push("/");
-      router.refresh(); // Refresh to update session state
+      // Force a full page reload to pick up the new session
+      console.log("Redirecting to home page...");
+      window.location.href = "/";
     } catch (err: any) {
       console.error("Verify OTP error:", err);
       setError(err.message || "Failed to verify OTP");

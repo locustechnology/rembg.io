@@ -1,6 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  // TEMPORARILY disable minification to test the fix
+  // TODO: Re-enable minification after resolving ONNX Runtime issues
+  swcMinify: false,
   async headers() {
     return [
       {
@@ -19,27 +22,29 @@ const nextConfig = {
       }
     ];
   },
-  webpack: (config, { isServer }) => {
+  webpack: (config, { isServer, dev }) => {
     // Handle ONNX Runtime WebAssembly files
     config.resolve.fallback = {
       ...config.resolve.fallback,
       fs: false,
     };
 
-    // Exclude ONNX files from minification to avoid import.meta issues
+    // Disable minification in production for testing
+    if (!isServer && !dev) {
+      config.optimization.minimize = false;
+    }
+
     if (!isServer) {
-      config.optimization.minimizer = config.optimization.minimizer.map(plugin => {
-        if (plugin.constructor.name === 'TerserPlugin') {
-          plugin.options.exclude = [
-            /ort.*\.js$/,
-            /ort.*\.mjs$/,
-            /webgpu.*\.js$/,
-            /webgpu.*\.mjs$/,
-            /onnx.*\.js$/,
-            /onnx.*\.mjs$/,
-          ];
-        }
-        return plugin;
+      config.module.rules.push({
+        test: /\.mjs$/,
+        include: /node_modules/,
+        type: 'javascript/auto',
+      });
+
+      // Handle WASM files as assets
+      config.module.rules.push({
+        test: /\.wasm$/,
+        type: 'asset/resource',
       });
     }
 

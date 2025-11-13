@@ -1,13 +1,27 @@
 import { supabaseAdmin } from "@/lib/supabase";
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
+import { setSessionCookie } from "better-auth/cookies";
 
 // OTP Verification endpoint
 export async function POST(request: Request) {
   try {
-    const { email, otp } = await request.json();
+    let { email, otp } = await request.json();
+
+    // Trim whitespace and convert to string
+    email = email?.trim();
+    otp = String(otp).trim();
+
+    console.log('==========================================');
+    console.log('🔐 [OTP VERIFY] Starting verification...');
+    console.log('🔐 [OTP VERIFY] Email:', email);
+    console.log('🔐 [OTP VERIFY] OTP entered:', otp);
+    console.log('🔐 [OTP VERIFY] OTP type:', typeof otp);
+    console.log('🔐 [OTP VERIFY] OTP length:', otp.length);
+    console.log('==========================================');
 
     if (!email || !otp) {
+      console.log('❌ [OTP VERIFY] Missing email or OTP');
       return NextResponse.json(
         { error: "Email and OTP are required" },
         { status: 400 }
@@ -22,7 +36,37 @@ export async function POST(request: Request) {
       .eq("value", otp)
       .single();
 
+    console.log('🔐 [OTP VERIFY] Database query result:');
+    console.log('🔐 [OTP VERIFY] Found verification:', !!verification);
+    console.log('🔐 [OTP VERIFY] Fetch error:', fetchError?.message || 'none');
+
+    if (verification) {
+      console.log('🔐 [OTP VERIFY] Verification details:');
+      console.log('🔐 [OTP VERIFY] - ID:', verification.id);
+      console.log('🔐 [OTP VERIFY] - Stored OTP:', verification.value);
+      console.log('🔐 [OTP VERIFY] - Entered OTP:', otp);
+      console.log('🔐 [OTP VERIFY] - Match:', verification.value === otp);
+      console.log('🔐 [OTP VERIFY] - Expires:', verification.expiresAt);
+    }
+
     if (fetchError || !verification) {
+      // Let's check if ANY OTP exists for this email
+      const { data: anyOtp } = await supabaseAdmin
+        .from("verification")
+        .select("*")
+        .eq("identifier", email)
+        .maybeSingle();
+
+      if (anyOtp) {
+        console.log('⚠️ [OTP VERIFY] OTP exists but doesnt match!');
+        console.log('⚠️ [OTP VERIFY] Stored OTP:', anyOtp.value);
+        console.log('⚠️ [OTP VERIFY] Entered OTP:', otp);
+        console.log('⚠️ [OTP VERIFY] Type comparison:', typeof anyOtp.value, typeof otp);
+      } else {
+        console.log('❌ [OTP VERIFY] No OTP found in database for this email');
+      }
+
+      console.log('==========================================');
       return NextResponse.json(
         { error: "Invalid OTP code" },
         { status: 400 }
@@ -94,53 +138,111 @@ export async function POST(request: Request) {
       .delete()
       .eq("id", verification.id);
 
-    // Create a session for the user manually
-    const sessionToken = crypto.randomUUID();
-    const sessionCreatedAt = new Date();
-    const sessionExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+    // Use Better Auth's internal adapter to create a proper session
+    console.log('[OTP Verification] Creating session for user:', userId);
 
-    const { error: sessionError } = await supabaseAdmin
-      .from("session")
-      .insert({
-        id: crypto.randomUUID(),
-        userId: userId,
-        token: sessionToken,
-        expiresAt: sessionExpiresAt.toISOString(),
-        createdAt: sessionCreatedAt.toISOString(),
-        updatedAt: sessionCreatedAt.toISOString(),
-        ipAddress: request.headers.get("x-forwarded-for") || "unknown",
-        userAgent: request.headers.get("user-agent") || "unknown",
+    try {
+      // Access Better Auth's internal database adapter
+      // @ts-ignore - accessing internal API
+      const internalAdapter = auth.options.database;
+
+      // Create session using Better Auth's structure
+      const sessionToken = crypto.randomUUID();
+      const sessionCreatedAt = new Date();
+      const sessionExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+
+      // Get full user data for session
+      const { data: fullUser } = await supabaseAdmin
+        .from("user")
+        .select("*")
+        .eq("id", userId)
+        .single();
+
+      if (!fullUser) {
+        console.error('[OTP Verification] User not found after creation');
+        return NextResponse.json(
+          { error: "User not found" },
+          { status: 500 }
+        );
+      }
+
+      console.log('[OTP Verification] Creating session with user data:', {
+        userId: fullUser.id,
+        email: fullUser.email,
+        name: fullUser.name
       });
 
-    if (sessionError) {
-      console.error('[OTP Verification] Failed to create session:', sessionError);
-      return NextResponse.json({
+      // Insert session into database with all required fields
+      const { data: sessionData, error: sessionError } = await supabaseAdmin
+        .from("session")
+        .insert({
+          id: crypto.randomUUID(),
+          userId: userId,
+          token: sessionToken,
+          expiresAt: sessionExpiresAt.toISOString(),
+          createdAt: sessionCreatedAt.toISOString(),
+          updatedAt: sessionCreatedAt.toISOString(),
+          ipAddress: request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "unknown",
+          userAgent: request.headers.get("user-agent") || "unknown",
+        })
+        .select()
+        .single();
+
+      if (sessionError) {
+        console.error('[OTP Verification] Failed to create session:', sessionError);
+        return NextResponse.json(
+          { error: "Failed to create session" },
+          { status: 500 }
+        );
+      }
+
+      console.log('[OTP Verification] Session created successfully in database');
+
+      // Create response with proper structure
+      const response = NextResponse.json({
         success: true,
-        message: "Email verified successfully. Please login with Google.",
+        message: isNewUser ? "Email verified and signed in successfully" : "Logged in successfully",
         userId,
-        requiresLogin: true,
+        isNewUser,
+        user: {
+          id: fullUser.id,
+          email: fullUser.email,
+          name: fullUser.name,
+          emailVerified: fullUser.emailVerified || true,
+        },
       });
+
+      // Set the session cookie with proper attributes
+      console.log('[OTP Verification] Setting session cookie:', sessionToken.substring(0, 10) + '...');
+
+      response.cookies.set("better-auth.session_token", sessionToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        maxAge: 7 * 24 * 60 * 60, // 7 days in seconds
+        path: "/",
+        domain: undefined, // Let browser handle domain
+      });
+
+      // Also set a secondary cookie for debugging
+      response.cookies.set("debug_has_session", "true", {
+        httpOnly: false,
+        secure: false,
+        sameSite: "lax",
+        maxAge: 7 * 24 * 60 * 60,
+        path: "/",
+      });
+
+      console.log('[OTP Verification] Response headers set, returning success');
+
+      return response;
+    } catch (sessionCreationError: any) {
+      console.error('[OTP Verification] Session creation error:', sessionCreationError);
+      return NextResponse.json(
+        { error: "Failed to create session", details: sessionCreationError.message },
+        { status: 500 }
+      );
     }
-
-    console.log('[OTP Verification] Session created successfully');
-
-    // Set the session cookie
-    const response = NextResponse.json({
-      success: true,
-      message: isNewUser ? "Email verified and signed in successfully" : "Logged in successfully",
-      userId,
-      isNewUser,
-    });
-
-    response.cookies.set("better-auth.session_token", sessionToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 7 * 24 * 60 * 60, // 7 days
-      path: "/",
-    });
-
-    return response;
   } catch (error: any) {
     console.error("Verify OTP error:", error);
     return NextResponse.json(
