@@ -84,8 +84,9 @@ export async function POST(request: Request) {
     try {
       const emailResult = await resend.emails.send({
         from: process.env.FROM_EMAIL!,
-        to: email,
+        to: [email],
         subject: `Your RemBG ${isLogin ? 'login' : 'verification'} code`,
+        reply_to: process.env.REPLY_TO_EMAIL,
         html: `
           <!DOCTYPE html>
           <html>

@@ -20,21 +20,22 @@ export const auth = betterAuth({
     },
   },
 
-  // Email OTP (Magic Link) - Temporarily disabled for testing
+  // Email OTP (Magic Link) - Enabled with new Resend credentials
   emailVerification: {
-    enabled: false,
-    sendEmailVerificationOnSignUp: false,
-    autoSignInAfterVerification: false,
-    sendOnSignUp: false,
-    async sendVerificationEmail(user, url, token) {
+    enabled: true,
+    sendEmailVerificationOnSignUp: true,
+    autoSignInAfterVerification: true,
+    sendOnSignUp: true,
+    async sendVerificationEmail({ user, url, token }) {
       const { Resend } = await import("resend");
       const resend = new Resend(process.env.RESEND_API_KEY);
 
       try {
         await resend.emails.send({
           from: process.env.FROM_EMAIL!,
-          to: user.email,
+          to: [user.email],
           subject: "Verify your RemBG account",
+          reply_to: process.env.REPLY_TO_EMAIL,
           html: `
             <!DOCTYPE html>
             <html>
@@ -115,7 +116,7 @@ export const auth = betterAuth({
 
   // Callbacks
   callbacks: {
-    async onSignUp(user) {
+    async onSignUp(user: any) {
       console.log(`New user signed up: ${user.email}`);
       // Credits are automatically created via database trigger
     },
@@ -123,4 +124,4 @@ export const auth = betterAuth({
 });
 
 export type Session = typeof auth.$Infer.Session;
-export type User = typeof auth.$Infer.User;
+export type User = Session['user'];

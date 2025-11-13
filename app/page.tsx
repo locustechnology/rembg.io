@@ -80,26 +80,7 @@ export default function Home() {
     setProgress(0);
 
     try {
-      // Deduct credits first
-      const deducted = await deductCredits(
-        creditCost,
-        `Background removal - ${inputFile.name} (${fileSizeMB}MB)`,
-        {
-          fileName: inputFile.name,
-          fileSize: inputFile.size,
-          fileSizeMB: fileSizeMB,
-          creditCost,
-          timestamp: new Date().toISOString(),
-        }
-      );
-
-      if (!deducted) {
-        setErrorMsg("Failed to deduct credits. Please try again.");
-        setProcessing(false);
-        return;
-      }
-
-      // Process the image
+      // Process the image FIRST (before deducting credits)
       const imageData = await new Response(inputFile).blob();
       const blob = await removeBackground(imageData, {
         progress: (key: string, current: number, total: number) => {
@@ -118,12 +99,61 @@ export default function Home() {
         },
       });
 
+      // Only deduct credits AFTER successful processing
+      const deducted = await deductCredits(
+        creditCost,
+        `Background removal - ${inputFile.name} (${fileSizeMB}MB)`,
+        {
+          fileName: inputFile.name,
+          fileSize: inputFile.size,
+          fileSizeMB: fileSizeMB,
+          creditCost,
+          timestamp: new Date().toISOString(),
+        }
+      );
+
+      if (!deducted) {
+        setErrorMsg("Processing succeeded but failed to deduct credits. Please contact support.");
+        setProcessing(false);
+        return;
+      }
+
       const url = URL.createObjectURL(blob);
       setOutputFileURL(url);
       setCurrentStatus(`Success! ${creditCost} credit${creditCost > 1 ? 's' : ''} used`);
     } catch (error) {
-      setErrorMsg("Error removing background. See console for more details.");
+      // Provide detailed error messages
+      let errorMessage = "Error removing background: ";
+
+      if (error instanceof Error) {
+        const errMsg = error.message.toLowerCase();
+
+        if (errMsg.includes("fetch") || errMsg.includes("network")) {
+          errorMessage += "Failed to load AI model. Please check your internet connection and try again.";
+        } else if (errMsg.includes("memory") || errMsg.includes("allocation")) {
+          errorMessage += "Image too large for processing. Try a smaller image or use lower quality settings.";
+        } else if (errMsg.includes("format") || errMsg.includes("decode")) {
+          errorMessage += "Unsupported or corrupted image format. Please try a different image (PNG, JPG, or WebP).";
+        } else if (errMsg.includes("cors") || errMsg.includes("cross-origin")) {
+          errorMessage += "Security policy error. Please refresh the page and try again.";
+        } else if (errMsg.includes("wasm") || errMsg.includes("module")) {
+          errorMessage += "Failed to initialize processing engine. Please refresh the page.";
+        } else {
+          errorMessage += error.message || "Unknown error occurred. Please try again.";
+        }
+      } else {
+        errorMessage += "Unknown error occurred. Please try again with a different image.";
+      }
+
+      setErrorMsg(errorMessage);
       console.error("Error removing background:", error);
+      console.error("Error details:", {
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        fileName: inputFile.name,
+        fileSize: inputFile.size,
+        model: modelPrecision,
+      });
     }
 
     setProcessing(false);

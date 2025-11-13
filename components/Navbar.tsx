@@ -102,9 +102,9 @@ export default function Navbar() {
               )}
             </div>
 
-            <a href="#" className="text-gray-700 hover:text-gray-900 font-medium text-sm transition-colors">
+            <Link href="/pricing" className="text-gray-700 hover:text-gray-900 font-medium text-sm transition-colors">
               Pricing
-            </a>
+            </Link>
           </div>
 
           {/* Action Buttons - Desktop & Mobile */}
@@ -253,9 +253,9 @@ export default function Navbar() {
               </div>
 
               {/* Pricing */}
-              <a href="#" className="px-3 py-2 text-gray-700 hover:bg-gray-50 rounded-lg font-medium">
+              <Link href="/pricing" className="px-3 py-2 text-gray-700 hover:bg-gray-50 rounded-lg font-medium">
                 Pricing
-              </a>
+              </Link>
 
               {/* Mobile Auth Buttons */}
               {!session?.user && (

@@ -14,7 +14,10 @@
       "Bash(cat:*)",
       "Bash(node test-resend.js:*)",
       "Bash(nul)",
-      "Bash(timeout /T 2)"
+      "Bash(timeout /T 2)",
+      "Bash(node test-otp-flow.js:*)",
+      "Bash(node -e:*)",
+      "WebFetch(domain:github.com)"
     ],
     "deny": [],
     "ask": []
