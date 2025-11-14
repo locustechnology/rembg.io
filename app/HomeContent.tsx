@@ -53,7 +53,7 @@ export default function HomeContent() {
       // Payment successful - verify and add credits with polling
       const handlePaymentSuccess = async () => {
         const toastId = toast.loading("Payment successful! Verifying and adding credits...");
-        const startBalance = credits; // Store current balance
+        const startBalance = useAuthStore.getState().credits; // Capture current balance from store
         let pollCount = 0;
         const MAX_POLLS = 15; // Poll for 30 seconds (15 x 2 seconds)
         let verificationAttempted = false;
@@ -172,7 +172,7 @@ export default function HomeContent() {
         pollIntervalRef.current = null;
       }
     };
-  }, [searchParams, session, router, fetchCredits, credits]);
+  }, [searchParams, session, router, fetchCredits]);
 
   // Calculate credit cost for current file
   const creditCost = inputFile ? calculateCreditCost(inputFile.size) : 0;
