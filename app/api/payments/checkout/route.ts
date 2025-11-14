@@ -67,8 +67,7 @@ export async function POST(request: Request) {
         email: session.user.email,
         name: session.user.name || session.user.email,
       },
-      success_url: `${process.env.NEXT_PUBLIC_APP_URL}?payment=success&planId=${planId}`,
-      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}?payment=cancelled`,
+      return_url: `${process.env.NEXT_PUBLIC_APP_URL}?payment=success&planId=${planId}`,
       metadata: {
         userId: session.user.id,
         planId: planId,
@@ -76,7 +75,7 @@ export async function POST(request: Request) {
       },
     });
 
-    if (!checkoutSession.url) {
+    if (!checkoutSession.checkout_url) {
       return NextResponse.json(
         { error: "Failed to create checkout session" },
         { status: 500 }
@@ -84,12 +83,12 @@ export async function POST(request: Request) {
     }
 
     // Create pending purchase record
-    const { error: purchaseError } = await supabaseAdmin
+    const { error: purchaseError} = await supabaseAdmin
       .from("purchases")
       .insert({
         userId: session.user.id,
         planId: planId,
-        dodoPaymentId: checkoutSession.payment_id || checkoutSession.id,
+        dodoPaymentId: checkoutSession.session_id,
         status: "pending",
         amount: plan.price,
         creditsAdded: plan.credits,
@@ -101,8 +100,8 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json({
-      checkoutUrl: checkoutSession.url,
-      paymentId: checkoutSession.payment_id || checkoutSession.id,
+      checkoutUrl: checkoutSession.checkout_url,
+      paymentId: checkoutSession.session_id,
     });
 
   } catch (error: any) {
