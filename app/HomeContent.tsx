@@ -97,11 +97,40 @@ export default function HomeContent() {
               });
               console.log(`[PAYMENT] Credits updated! ${initialBalance} → ${currentBalance}`);
             } else {
-              toast.error("Credits not updated yet. Please refresh the page.", {
-                id: toastId,
-                duration: 5000,
-              });
-              console.log('[PAYMENT] Polling stopped - credits not updated');
+              // Webhook didn't process - try manual verification as fallback
+              console.log('[PAYMENT] Webhook timeout - trying manual verification...');
+              toast.loading("Webhook delayed - verifying payment manually...", { id: toastId });
+
+              try {
+                const response = await fetch("/api/payments/verify", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ planId }),
+                });
+
+                if (response.ok) {
+                  const data = await response.json();
+                  await fetchCredits(); // Refresh credits
+                  toast.success(`Success! ${data.creditsAdded} credits added. You now have ${data.newBalance} credits.`, {
+                    id: toastId,
+                    duration: 5000,
+                  });
+                  console.log('[PAYMENT] Manual verification successful!');
+                } else {
+                  const error = await response.json();
+                  toast.error(error.error || "Payment verification failed. Please contact support.", {
+                    id: toastId,
+                    duration: 5000,
+                  });
+                  console.error('[PAYMENT] Manual verification failed:', error);
+                }
+              } catch (error) {
+                console.error('[PAYMENT] Manual verification error:', error);
+                toast.error("Could not verify payment. Please refresh the page.", {
+                  id: toastId,
+                  duration: 5000,
+                });
+              }
             }
           }
         }, 1000); // Poll every 1 second
