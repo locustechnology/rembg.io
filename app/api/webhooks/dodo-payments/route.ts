@@ -7,13 +7,15 @@ export const POST = Webhooks({
   // Handle successful payments
   onPaymentSucceeded: async (payload) => {
     try {
-      console.log("[WEBHOOK] Payment succeeded:", payload);
+      console.log("[WEBHOOK] Payment succeeded - Full payload:", JSON.stringify(payload, null, 2));
 
       // Extract metadata from the payment
       const { metadata } = payload;
       const userId = metadata?.userId;
       const planId = metadata?.planId;
       const credits = parseInt(metadata?.credits || "0");
+
+      console.log("[WEBHOOK] Extracted metadata:", { userId, planId, credits, paymentId: payload.id });
 
       if (!userId || !planId || !credits) {
         console.error("[WEBHOOK] Missing required metadata:", { userId, planId, credits });
@@ -32,19 +34,29 @@ export const POST = Webhooks({
         return;
       }
 
-      // Get the pending purchase
+      // Get the pending purchase by userId + planId (most recent)
+      // We can't match by dodoPaymentId because checkout stores session_id, webhook sends payment_id
       const { data: purchase, error: purchaseError } = await supabaseAdmin
         .from("purchases")
         .select("*")
         .eq("userId", userId)
-        .eq("dodoPaymentId", payload.id)
+        .eq("planId", planId)
         .eq("status", "pending")
+        .order("createdAt", { ascending: false })
+        .limit(1)
         .single();
 
       if (purchaseError || !purchase) {
         console.log("[WEBHOOK] No pending purchase found or already processed");
+        console.log("[WEBHOOK] Purchase error:", purchaseError);
         return;
       }
+
+      // Update the purchase with the actual payment_id from webhook
+      await supabaseAdmin
+        .from("purchases")
+        .update({ dodoPaymentId: payload.id })
+        .eq("id", purchase.id);
 
       // Get current credit balance
       const { data: creditData, error: creditError } = await supabaseAdmin
