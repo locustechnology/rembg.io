@@ -1,14 +1,26 @@
 "use client";
 
-import { useState } from "react";
-import { Check, Crown, Zap, Building2, Sparkles, ArrowRight } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Check, Crown, Zap, Building2, Sparkles, ArrowRight, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import Link from "next/link";
 import { useSession } from "@/lib/auth-client";
+import { toast } from "sonner";
+
+interface PaymentPlan {
+  id: string;
+  name: string;
+  price: number;
+  credits: number;
+  description: string | null;
+  dodoProductId: string | null;
+  active: boolean;
+}
 
 interface PricingTier {
+  id: string;
   name: string;
   icon: any;
   price: number;
@@ -22,10 +34,68 @@ interface PricingTier {
 
 export default function PricingPage() {
   const { data: session } = useSession();
-  const [billingCycle, setBillingCycle] = useState<"monthly" | "annual">("monthly");
+  const [plans, setPlans] = useState<PaymentPlan[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
 
-  const pricingTiers: PricingTier[] = [
-    {
+  // Fetch payment plans from API
+  useEffect(() => {
+    async function fetchPlans() {
+      try {
+        const response = await fetch("/api/payments/plans");
+        const data = await response.json();
+        setPlans(data.plans || []);
+      } catch (error) {
+        console.error("Error fetching plans:", error);
+        toast.error("Failed to load pricing plans");
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchPlans();
+  }, []);
+
+  // Map database plans to UI tiers
+  const getPricingTiers = (): PricingTier[] => {
+    const iconMap: { [key: string]: any } = {
+      Starter: Zap,
+      Pro: Crown,
+      Premium: Building2,
+    };
+
+    const gradientMap: { [key: string]: string } = {
+      Starter: "from-purple-600 to-blue-600",
+      Pro: "from-indigo-600 to-purple-600",
+      Premium: "from-blue-600 to-cyan-600",
+    };
+
+    const featuresMap: { [key: string]: string[] } = {
+      Starter: [
+        "25 credits",
+        "High-resolution processing",
+        "All output formats",
+        "Email support",
+        "No watermarks",
+      ],
+      Pro: [
+        "50 credits",
+        "Ultra high-resolution support",
+        "Priority processing",
+        "Batch processing",
+        "Priority support",
+      ],
+      Premium: [
+        "125 credits",
+        "Unlimited resolution",
+        "Fastest processing",
+        "Advanced features",
+        "24/7 priority support",
+      ],
+    };
+
+    // Add Free tier first
+    const freeTier: PricingTier = {
+      id: "free",
       name: "Free",
       icon: Sparkles,
       price: 0,
@@ -40,65 +110,25 @@ export default function PricingPage() {
       ],
       color: "gray",
       gradient: "from-gray-600 to-gray-700",
-    },
-    {
-      name: "Starter",
-      icon: Zap,
-      price: billingCycle === "monthly" ? 9 : 90,
-      credits: billingCycle === "monthly" ? 50 : 600,
-      pricePerCredit: billingCycle === "monthly" ? "$0.18" : "$0.15",
-      popular: true,
-      features: [
-        `${billingCycle === "monthly" ? "50" : "600"} credits per ${billingCycle === "monthly" ? "month" : "year"}`,
-        "High-resolution processing",
-        "Priority processing queue",
-        "All output formats",
-        "Email support",
-        "No watermarks",
-      ],
-      color: "purple",
-      gradient: "from-purple-600 to-blue-600",
-    },
-    {
-      name: "Professional",
-      icon: Crown,
-      price: billingCycle === "monthly" ? 29 : 290,
-      credits: billingCycle === "monthly" ? 200 : 2500,
-      pricePerCredit: billingCycle === "monthly" ? "$0.145" : "$0.116",
-      features: [
-        `${billingCycle === "monthly" ? "200" : "2,500"} credits per ${billingCycle === "monthly" ? "month" : "year"}`,
-        "Ultra high-resolution support",
-        "Fastest processing",
-        "Batch processing",
-        "API access",
-        "Priority support",
-        "Advanced customization",
-      ],
-      color: "indigo",
-      gradient: "from-indigo-600 to-purple-600",
-    },
-    {
-      name: "Business",
-      icon: Building2,
-      price: billingCycle === "monthly" ? 99 : 990,
-      credits: billingCycle === "monthly" ? 1000 : 12500,
-      pricePerCredit: billingCycle === "monthly" ? "$0.099" : "$0.079",
-      features: [
-        `${billingCycle === "monthly" ? "1,000" : "12,500"} credits per ${billingCycle === "monthly" ? "month" : "year"}`,
-        "Unlimited resolution",
-        "Dedicated processing",
-        "White-label option",
-        "Advanced API features",
-        "Custom integrations",
-        "24/7 priority support",
-        "Team collaboration",
-      ],
-      color: "blue",
-      gradient: "from-blue-600 to-cyan-600",
-    },
-  ];
+    };
 
-  const handleSelectPlan = (tier: PricingTier) => {
+    const paidTiers = plans.map((plan, index) => ({
+      id: plan.id,
+      name: plan.name,
+      icon: iconMap[plan.name] || Zap,
+      price: Number(plan.price),
+      credits: plan.credits,
+      pricePerCredit: `$${(Number(plan.price) / plan.credits).toFixed(2)}`,
+      popular: plan.name === "Pro", // Mark Pro as popular
+      features: featuresMap[plan.name] || [`${plan.credits} credits`, plan.description || ""].filter(Boolean),
+      color: "purple",
+      gradient: gradientMap[plan.name] || "from-purple-600 to-blue-600",
+    }));
+
+    return [freeTier, ...paidTiers];
+  };
+
+  const handleSelectPlan = async (tier: PricingTier) => {
     if (!session?.user) {
       window.location.href = "/signup";
       return;
@@ -109,9 +139,35 @@ export default function PricingPage() {
       return;
     }
 
-    // TODO: Integrate with payment gateway
-    console.log("Selected plan:", tier.name);
+    setCheckoutLoading(tier.id);
+
+    try {
+      const response = await fetch("/api/payments/checkout", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          planId: tier.id,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to create checkout session");
+      }
+
+      // Redirect to Dodo checkout
+      window.location.href = data.checkoutUrl;
+    } catch (error: any) {
+      console.error("Checkout error:", error);
+      toast.error(error.message || "Failed to start checkout process");
+      setCheckoutLoading(null);
+    }
   };
+
+  const pricingTiers = getPricingTiers();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50">
@@ -126,42 +182,9 @@ export default function PricingPage() {
               Pricing
             </span>
           </h1>
-          <p className="text-lg sm:text-xl text-gray-600 max-w-2xl mx-auto mb-8">
+          <p className="text-lg sm:text-xl text-gray-600 max-w-2xl mx-auto mb-12">
             Choose the perfect plan for your needs. Start free, upgrade anytime.
           </p>
-
-          {/* Billing Toggle */}
-          <div className="flex items-center justify-center gap-4 mb-12">
-            <span
-              className={`text-sm font-semibold ${
-                billingCycle === "monthly" ? "text-gray-900" : "text-gray-500"
-              }`}
-            >
-              Monthly
-            </span>
-            <button
-              onClick={() =>
-                setBillingCycle(billingCycle === "monthly" ? "annual" : "monthly")
-              }
-              className="relative inline-flex h-8 w-14 items-center rounded-full bg-gradient-to-r from-purple-600 to-blue-600 transition-all"
-            >
-              <span
-                className={`inline-block h-6 w-6 transform rounded-full bg-white shadow-lg transition-transform ${
-                  billingCycle === "annual" ? "translate-x-7" : "translate-x-1"
-                }`}
-              />
-            </button>
-            <span
-              className={`text-sm font-semibold ${
-                billingCycle === "annual" ? "text-gray-900" : "text-gray-500"
-              }`}
-            >
-              Annual
-            </span>
-            <span className="ml-2 inline-flex items-center rounded-full bg-gradient-to-r from-purple-600 to-blue-600 px-3 py-1 text-xs font-semibold text-white">
-              Save 20%
-            </span>
-          </div>
         </div>
 
         {/* Pricing Cards */}
@@ -205,9 +228,7 @@ export default function PricingPage() {
                       <span className="text-4xl font-bold text-gray-900">
                         ${tier.price}
                       </span>
-                      <span className="text-gray-600">
-                        /{billingCycle === "monthly" ? "mo" : "yr"}
-                      </span>
+                      <span className="text-gray-600">one-time</span>
                     </div>
                     <p className="text-sm text-gray-600 mt-1">
                       {tier.credits} credits • {tier.pricePerCredit}/credit
@@ -217,18 +238,28 @@ export default function PricingPage() {
                   {/* CTA Button */}
                   <Button
                     onClick={() => handleSelectPlan(tier)}
+                    disabled={checkoutLoading !== null || loading}
                     className={`w-full mb-6 ${
                       tier.popular
                         ? "bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
                         : "bg-gray-900 hover:bg-gray-800"
                     } text-white font-semibold`}
                   >
-                    {tier.price === 0
-                      ? "Get Started Free"
-                      : session?.user
-                      ? "Select Plan"
-                      : "Sign Up to Select"}
-                    <ArrowRight className="ml-2 w-4 h-4" />
+                    {checkoutLoading === tier.id ? (
+                      <>
+                        <Loader2 className="mr-2 w-4 h-4 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        {tier.price === 0
+                          ? "Get Started Free"
+                          : session?.user
+                          ? "Select Plan"
+                          : "Sign Up to Select"}
+                        <ArrowRight className="ml-2 w-4 h-4" />
+                      </>
+                    )}
                   </Button>
 
                   {/* Features */}

@@ -17,7 +17,8 @@
       "Bash(timeout /T 2)",
       "Bash(node test-otp-flow.js:*)",
       "Bash(node -e:*)",
-      "WebFetch(domain:github.com)"
+      "WebFetch(domain:github.com)",
+      "WebSearch"
     ],
     "deny": [],
     "ask": []

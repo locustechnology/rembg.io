@@ -25,9 +25,9 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Local env files
-.env*.local
-.env
+# Local env files - COMMENTED OUT FOR TEST MODE DEPLOYMENT
+# .env*.local
+# .env
 
 # Vercel
 .vercel
