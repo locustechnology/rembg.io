@@ -52,20 +52,37 @@ export default function HomeContent() {
       // Payment successful - credits added automatically via webhook
       const handlePaymentSuccess = async () => {
         toast.success(
-          `Payment successful! Credits will be added to your account shortly.`,
+          `Payment successful! Updating your credits...`,
           {
             duration: 5000,
           }
         );
 
-        // Refresh credits to show updated balance
-        // Give webhook a moment to process (webhook usually fires within 1-2 seconds)
-        setTimeout(async () => {
-          await fetchCredits();
-        }, 2000);
+        // Aggressively poll for credit updates (webhook can take 1-10 seconds)
+        // Poll every second for 15 seconds
+        let pollCount = 0;
+        const maxPolls = 15;
+        const initialBalance = credits;
 
-        // Clean up URL
-        router.replace("/");
+        const pollInterval = setInterval(async () => {
+          pollCount++;
+          await fetchCredits();
+
+          // Stop polling if credits increased or max polls reached
+          if (credits > initialBalance || pollCount >= maxPolls) {
+            clearInterval(pollInterval);
+            if (credits > initialBalance) {
+              toast.success(`Credits updated! You now have ${credits} credits.`, {
+                duration: 3000,
+              });
+            }
+          }
+        }, 1000); // Poll every 1 second
+
+        // Clean up URL after first poll
+        setTimeout(() => {
+          router.replace("/");
+        }, 1000);
       };
 
       handlePaymentSuccess();
