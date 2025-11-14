@@ -49,41 +49,26 @@ export default function HomeContent() {
     const planId = searchParams.get("planId");
 
     if (payment === "success" && planId && session?.user) {
-      // Verify payment and add credits
-      const verifyPayment = async () => {
-        try {
-          const response = await fetch("/api/payments/verify", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ planId }),
-          });
-
-          const data = await response.json();
-
-          if (response.ok) {
-            toast.success(
-              `Payment successful! ${data.creditsAdded} credits added to your account.`,
-              {
-                duration: 5000,
-              }
-            );
-            // Refresh credits
-            await fetchCredits();
-          } else {
-            toast.error(data.error || "Failed to verify payment");
+      // Payment successful - credits added automatically via webhook
+      const handlePaymentSuccess = async () => {
+        toast.success(
+          `Payment successful! Credits will be added to your account shortly.`,
+          {
+            duration: 5000,
           }
-        } catch (error: any) {
-          console.error("Payment verification error:", error);
-          toast.error("Failed to verify payment");
-        }
+        );
+
+        // Refresh credits to show updated balance
+        // Give webhook a moment to process (webhook usually fires within 1-2 seconds)
+        setTimeout(async () => {
+          await fetchCredits();
+        }, 2000);
 
         // Clean up URL
         router.replace("/");
       };
 
-      verifyPayment();
+      handlePaymentSuccess();
     } else if (payment === "cancelled") {
       toast.info("Payment cancelled. You can try again anytime!");
       router.replace("/");
