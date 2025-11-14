@@ -54,7 +54,12 @@ export default function HomeContent() {
       const handlePaymentSuccess = async () => {
         const toastId = toast.loading("Payment successful! Updating your credits...");
 
-        // Store initial balance before polling starts
+        // CRITICAL: Fetch credits FIRST to get the actual current balance
+        // Otherwise initialBalance might be 0 if credits haven't loaded yet!
+        console.log('[PAYMENT] Fetching initial credit balance...');
+        await fetchCredits();
+
+        // NOW get the real initial balance
         const initialBalance = useAuthStore.getState().credits;
         let pollCount = 0;
         const maxPolls = 20; // Poll for 20 seconds
