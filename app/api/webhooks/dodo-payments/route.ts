@@ -92,6 +92,7 @@ export const POST = Webhooks({
           type: "purchase",
           amount: credits,
           balanceAfter: newBalance,
+          description: `Purchased ${plan.name} plan - ${credits} credits`,
           metadata: {
             planId: planId,
             planName: plan.name,
