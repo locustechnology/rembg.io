@@ -55,16 +55,20 @@ export async function POST(request: Request) {
       environment: (process.env.DODO_PAYMENTS_ENVIRONMENT as "test_mode" | "live_mode") || "test_mode",
     });
 
-    // Create payment link
-    const payment = await dodoClient.payments.create({
-      productId: plan.dodoProductId,
-      quantity: 1,
+    // Create checkout session with product_cart (new Dodo API format)
+    const checkoutSession = await dodoClient.checkoutSessions.create({
+      product_cart: [
+        {
+          product_id: plan.dodoProductId,
+          quantity: 1,
+        },
+      ],
       customer: {
         email: session.user.email,
         name: session.user.name || session.user.email,
       },
-      successUrl: `${process.env.NEXT_PUBLIC_APP_URL}?payment=success&planId=${planId}`,
-      cancelUrl: `${process.env.NEXT_PUBLIC_APP_URL}?payment=cancelled`,
+      success_url: `${process.env.NEXT_PUBLIC_APP_URL}?payment=success&planId=${planId}`,
+      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}?payment=cancelled`,
       metadata: {
         userId: session.user.id,
         planId: planId,
@@ -72,9 +76,9 @@ export async function POST(request: Request) {
       },
     });
 
-    if (!payment.payment_link) {
+    if (!checkoutSession.url) {
       return NextResponse.json(
-        { error: "Failed to create payment link" },
+        { error: "Failed to create checkout session" },
         { status: 500 }
       );
     }
@@ -85,7 +89,7 @@ export async function POST(request: Request) {
       .insert({
         userId: session.user.id,
         planId: planId,
-        dodoPaymentId: payment.id,
+        dodoPaymentId: checkoutSession.payment_id || checkoutSession.id,
         status: "pending",
         amount: plan.price,
         creditsAdded: plan.credits,
@@ -97,8 +101,8 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json({
-      checkoutUrl: payment.payment_link,
-      paymentId: payment.id,
+      checkoutUrl: checkoutSession.url,
+      paymentId: checkoutSession.payment_id || checkoutSession.id,
     });
 
   } catch (error: any) {
