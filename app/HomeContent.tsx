@@ -42,6 +42,7 @@ export default function HomeContent() {
   const { credits, deductCredits, fetchCredits } = useAuthStore();
   const searchParams = useSearchParams();
   const router = useRouter();
+  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Handle payment success/cancel
   useEffect(() => {
@@ -51,38 +52,59 @@ export default function HomeContent() {
     if (payment === "success" && planId && session?.user) {
       // Payment successful - credits added automatically via webhook
       const handlePaymentSuccess = async () => {
-        toast.success(
-          `Payment successful! Updating your credits...`,
-          {
-            duration: 5000,
-          }
-        );
+        const toastId = toast.loading("Payment successful! Updating your credits...");
 
-        // Aggressively poll for credit updates (webhook can take 1-10 seconds)
-        // Poll every second for 15 seconds
+        // Store initial balance before polling starts
+        const initialBalance = useAuthStore.getState().credits;
         let pollCount = 0;
-        const maxPolls = 15;
-        const initialBalance = credits;
+        const maxPolls = 20; // Poll for 20 seconds
 
-        const pollInterval = setInterval(async () => {
+        console.log('[PAYMENT] Starting credit polling. Initial balance:', initialBalance);
+
+        // Clear any existing interval
+        if (pollIntervalRef.current) {
+          clearInterval(pollIntervalRef.current);
+        }
+
+        // Aggressively poll for credit updates
+        pollIntervalRef.current = setInterval(async () => {
           pollCount++;
+          console.log(`[PAYMENT] Poll ${pollCount}/${maxPolls}: Fetching credits...`);
+
           await fetchCredits();
 
+          // Get the LATEST credits from store
+          const currentBalance = useAuthStore.getState().credits;
+          console.log(`[PAYMENT] Current balance: ${currentBalance}, Initial: ${initialBalance}`);
+
           // Stop polling if credits increased or max polls reached
-          if (credits > initialBalance || pollCount >= maxPolls) {
-            clearInterval(pollInterval);
-            if (credits > initialBalance) {
-              toast.success(`Credits updated! You now have ${credits} credits.`, {
-                duration: 3000,
+          if (currentBalance > initialBalance || pollCount >= maxPolls) {
+            if (pollIntervalRef.current) {
+              clearInterval(pollIntervalRef.current);
+              pollIntervalRef.current = null;
+            }
+
+            if (currentBalance > initialBalance) {
+              const creditsAdded = currentBalance - initialBalance;
+              toast.success(`Success! ${creditsAdded} credits added. You now have ${currentBalance} credits.`, {
+                id: toastId,
+                duration: 5000,
               });
+              console.log(`[PAYMENT] Credits updated! ${initialBalance} → ${currentBalance}`);
+            } else {
+              toast.error("Credits not updated yet. Please refresh the page.", {
+                id: toastId,
+                duration: 5000,
+              });
+              console.log('[PAYMENT] Polling stopped - credits not updated');
             }
           }
         }, 1000); // Poll every 1 second
 
-        // Clean up URL after first poll
+        // Clean up URL after 2 seconds
         setTimeout(() => {
           router.replace("/");
-        }, 1000);
+        }, 2000);
       };
 
       handlePaymentSuccess();
@@ -90,6 +112,14 @@ export default function HomeContent() {
       toast.info("Payment cancelled. You can try again anytime!");
       router.replace("/");
     }
+
+    // Cleanup function
+    return () => {
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+        pollIntervalRef.current = null;
+      }
+    };
   }, [searchParams, session, router, fetchCredits]);
 
   // Calculate credit cost for current file
