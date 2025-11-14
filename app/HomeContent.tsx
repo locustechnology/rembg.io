@@ -50,92 +50,60 @@ export default function HomeContent() {
     const planId = searchParams.get("planId");
 
     if (payment === "success" && planId && session?.user) {
-      // Payment successful - credits added automatically via webhook
+      // Payment successful - verify and add credits IMMEDIATELY
       const handlePaymentSuccess = async () => {
-        const toastId = toast.loading("Payment successful! Updating your credits...");
+        const toastId = toast.loading("Payment successful! Adding credits...");
 
-        // CRITICAL: Fetch credits FIRST to get the actual current balance
-        // Otherwise initialBalance might be 0 if credits haven't loaded yet!
-        console.log('[PAYMENT] Fetching initial credit balance...');
-        await fetchCredits();
+        console.log('[PAYMENT] Verifying payment and adding credits immediately');
 
-        // NOW get the real initial balance
-        const initialBalance = useAuthStore.getState().credits;
-        let pollCount = 0;
-        const maxPolls = 20; // Poll for 20 seconds
+        try {
+          // Call verify endpoint IMMEDIATELY - don't wait for webhook
+          const response = await fetch("/api/payments/verify", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ planId }),
+          });
 
-        console.log('[PAYMENT] Starting credit polling. Initial balance:', initialBalance);
+          if (response.ok) {
+            const data = await response.json();
 
-        // Clear any existing interval
-        if (pollIntervalRef.current) {
-          clearInterval(pollIntervalRef.current);
-        }
+            // Refresh credits to show new balance
+            await fetchCredits();
 
-        // Aggressively poll for credit updates
-        pollIntervalRef.current = setInterval(async () => {
-          pollCount++;
-          console.log(`[PAYMENT] Poll ${pollCount}/${maxPolls}: Fetching credits...`);
+            toast.success(`Success! ${data.creditsAdded} credits added. You now have ${data.newBalance} credits.`, {
+              id: toastId,
+              duration: 5000,
+            });
 
-          await fetchCredits();
+            console.log(`[PAYMENT] Credits added successfully: ${data.creditsAdded} credits`);
+          } else {
+            const error = await response.json();
 
-          // Get the LATEST credits from store
-          const currentBalance = useAuthStore.getState().credits;
-          console.log(`[PAYMENT] Current balance: ${currentBalance}, Initial: ${initialBalance}`);
-
-          // Stop polling if credits increased or max polls reached
-          if (currentBalance > initialBalance || pollCount >= maxPolls) {
-            if (pollIntervalRef.current) {
-              clearInterval(pollIntervalRef.current);
-              pollIntervalRef.current = null;
-            }
-
-            if (currentBalance > initialBalance) {
-              const creditsAdded = currentBalance - initialBalance;
-              toast.success(`Success! ${creditsAdded} credits added. You now have ${currentBalance} credits.`, {
+            if (response.status === 404) {
+              // Already processed
+              toast.info("Payment already processed!", {
+                id: toastId,
+                duration: 3000,
+              });
+              await fetchCredits();
+            } else {
+              toast.error(error.error || "Failed to add credits. Please refresh the page.", {
                 id: toastId,
                 duration: 5000,
               });
-              console.log(`[PAYMENT] Credits updated! ${initialBalance} → ${currentBalance}`);
-            } else {
-              // Webhook didn't process - try manual verification as fallback
-              console.log('[PAYMENT] Webhook timeout - trying manual verification...');
-              toast.loading("Webhook delayed - verifying payment manually...", { id: toastId });
-
-              try {
-                const response = await fetch("/api/payments/verify", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ planId }),
-                });
-
-                if (response.ok) {
-                  const data = await response.json();
-                  await fetchCredits(); // Refresh credits
-                  toast.success(`Success! ${data.creditsAdded} credits added. You now have ${data.newBalance} credits.`, {
-                    id: toastId,
-                    duration: 5000,
-                  });
-                  console.log('[PAYMENT] Manual verification successful!');
-                } else {
-                  const error = await response.json();
-                  toast.error(error.error || "Payment verification failed. Please contact support.", {
-                    id: toastId,
-                    duration: 5000,
-                  });
-                  console.error('[PAYMENT] Manual verification failed:', error);
-                }
-              } catch (error) {
-                console.error('[PAYMENT] Manual verification error:', error);
-                toast.error("Could not verify payment. Please refresh the page.", {
-                  id: toastId,
-                  duration: 5000,
-                });
-              }
             }
-          }
-        }, 1000); // Poll every 1 second
 
-        // Clean up URL after 2 seconds
+            console.error('[PAYMENT] Verification error:', error);
+          }
+        } catch (error) {
+          console.error('[PAYMENT] Error:', error);
+          toast.error("Could not verify payment. Please refresh the page.", {
+            id: toastId,
+            duration: 5000,
+          });
+        }
+
+        // Clean up URL
         setTimeout(() => {
           router.replace("/");
         }, 2000);
