@@ -50,24 +50,31 @@ export default function HomeContent() {
     const planId = searchParams.get("planId");
 
     if (payment === "success" && planId && session?.user) {
-      // Payment successful - verify and add credits IMMEDIATELY
+      // Payment successful - verify and add credits with polling
       const handlePaymentSuccess = async () => {
-        const toastId = toast.loading("Payment successful! Adding credits...");
+        const toastId = toast.loading("Payment successful! Verifying and adding credits...");
+        const startBalance = credits; // Store current balance
+        let pollCount = 0;
+        const MAX_POLLS = 15; // Poll for 30 seconds (15 x 2 seconds)
+        let verificationAttempted = false;
 
-        console.log('[PAYMENT] Verifying payment and adding credits immediately');
+        console.log('[PAYMENT] Starting payment verification process. Current balance:', startBalance);
 
+        // STEP 1: Try to verify and add credits immediately
         try {
-          // Call verify endpoint IMMEDIATELY - don't wait for webhook
           const response = await fetch("/api/payments/verify", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ planId }),
           });
 
+          verificationAttempted = true;
+
           if (response.ok) {
             const data = await response.json();
+            console.log(`[PAYMENT] Immediate verification successful: ${data.creditsAdded} credits added`);
 
-            // Refresh credits to show new balance
+            // Fetch updated balance
             await fetchCredits();
 
             toast.success(`Success! ${data.creditsAdded} credits added. You now have ${data.newBalance} credits.`, {
@@ -75,38 +82,81 @@ export default function HomeContent() {
               duration: 5000,
             });
 
-            console.log(`[PAYMENT] Credits added successfully: ${data.creditsAdded} credits`);
+            // Clean up URL and exit
+            setTimeout(() => {
+              router.replace("/");
+            }, 2000);
+            return; // Exit early if immediate verification worked
+          } else if (response.status === 404) {
+            console.log('[PAYMENT] No pending purchase found - may have been processed by webhook already');
           } else {
             const error = await response.json();
-
-            if (response.status === 404) {
-              // Already processed
-              toast.info("Payment already processed!", {
-                id: toastId,
-                duration: 3000,
-              });
-              await fetchCredits();
-            } else {
-              toast.error(error.error || "Failed to add credits. Please refresh the page.", {
-                id: toastId,
-                duration: 5000,
-              });
-            }
-
-            console.error('[PAYMENT] Verification error:', error);
+            console.error('[PAYMENT] Verification failed:', error);
           }
         } catch (error) {
-          console.error('[PAYMENT] Error:', error);
-          toast.error("Could not verify payment. Please refresh the page.", {
-            id: toastId,
-            duration: 5000,
-          });
+          console.error('[PAYMENT] Immediate verification error:', error);
         }
 
-        // Clean up URL
-        setTimeout(() => {
-          router.replace("/");
-        }, 2000);
+        // STEP 2: If immediate verification didn't work, start polling for webhook processing
+        console.log('[PAYMENT] Starting polling for webhook-processed credits...');
+        toast.loading("Waiting for payment processing... This may take a few seconds.", {
+          id: toastId,
+        });
+
+        // Poll every 2 seconds to check if credits have been added
+        pollIntervalRef.current = setInterval(async () => {
+          pollCount++;
+          console.log(`[PAYMENT] Poll #${pollCount}: Checking for credit updates...`);
+
+          // Fetch current balance
+          await fetchCredits();
+          const currentCredits = useAuthStore.getState().credits;
+
+          // Check if credits have increased
+          if (currentCredits > startBalance) {
+            const creditsAdded = currentCredits - startBalance;
+            console.log(`[PAYMENT] Credits detected! Added ${creditsAdded} credits (${startBalance} → ${currentCredits})`);
+
+            toast.success(`Payment processed! ${creditsAdded} credits added. You now have ${currentCredits} credits.`, {
+              id: toastId,
+              duration: 5000,
+            });
+
+            // Stop polling
+            if (pollIntervalRef.current) {
+              clearInterval(pollIntervalRef.current);
+              pollIntervalRef.current = null;
+            }
+
+            // Clean up URL
+            setTimeout(() => {
+              router.replace("/");
+            }, 2000);
+            return;
+          }
+
+          // If we've polled for 30 seconds without success, give up
+          if (pollCount >= MAX_POLLS) {
+            console.warn('[PAYMENT] Polling timeout - credits not detected after 30 seconds');
+
+            toast.warning("Payment verification is taking longer than expected. Your credits may appear shortly. Please refresh the page in a moment.", {
+              id: toastId,
+              duration: 7000,
+            });
+
+            // Stop polling
+            if (pollIntervalRef.current) {
+              clearInterval(pollIntervalRef.current);
+              pollIntervalRef.current = null;
+            }
+
+            // Clean up URL
+            setTimeout(() => {
+              router.replace("/");
+            }, 3000);
+          }
+        }, 2000); // Poll every 2 seconds
+
       };
 
       handlePaymentSuccess();
@@ -122,7 +172,7 @@ export default function HomeContent() {
         pollIntervalRef.current = null;
       }
     };
-  }, [searchParams, session, router, fetchCredits]);
+  }, [searchParams, session, router, fetchCredits, credits]);
 
   // Calculate credit cost for current file
   const creditCost = inputFile ? calculateCreditCost(inputFile.size) : 0;
