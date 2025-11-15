@@ -216,8 +216,10 @@ export default function HomeContent() {
 
     try {
       // Process the image FIRST (before deducting credits)
-      const imageData = await new Response(inputFile).blob();
-      const blob = await removeBackground(imageData, {
+      // Create object URL from file for the background removal library
+      const imageUrl = URL.createObjectURL(inputFile);
+
+      const blob = await removeBackground(imageUrl, {
         progress: (key: string, current: number, total: number) => {
           if (key.includes("fetch")) {
             setCurrentStatus("Fetching model...");
@@ -233,6 +235,9 @@ export default function HomeContent() {
           quality: quality / 100,
         },
       });
+
+      // Revoke the object URL to free memory
+      URL.revokeObjectURL(imageUrl);
 
       // Only deduct credits AFTER successful processing
       const deducted = await deductCredits(
