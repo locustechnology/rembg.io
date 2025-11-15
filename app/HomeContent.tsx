@@ -44,6 +44,8 @@ export default function HomeContent() {
   const router = useRouter();
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
+  // No ONNX configuration needed - library handles this via publicPath in removeBackground options
+
   // Handle payment success/cancel
   useEffect(() => {
     const payment = searchParams.get("payment");
@@ -216,11 +218,24 @@ export default function HomeContent() {
 
     try {
       // Process the image FIRST (before deducting credits)
-      // Create object URL from file for the background removal library
-      const imageUrl = URL.createObjectURL(inputFile);
+      console.log('[DEBUG] Starting background removal process');
+      console.log('[DEBUG] Input file:', {
+        name: inputFile.name,
+        size: inputFile.size,
+        type: inputFile.type
+      });
 
-      const blob = await removeBackground(imageUrl, {
+      console.log('[DEBUG] Calling removeBackground with File object directly');
+      console.log('[DEBUG] File details:', {
+        name: inputFile.name,
+        type: inputFile.type,
+        size: inputFile.size
+      });
+
+      const blob = await removeBackground(inputFile, {
+        publicPath: 'https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.5.3/dist/',
         progress: (key: string, current: number, total: number) => {
+          console.log('[DEBUG] Progress:', key, current, total);
           if (key.includes("fetch")) {
             setCurrentStatus("Fetching model...");
           }
@@ -236,8 +251,7 @@ export default function HomeContent() {
         },
       });
 
-      // Revoke the object URL to free memory
-      URL.revokeObjectURL(imageUrl);
+      console.log('[DEBUG] Background removed successfully');
 
       // Only deduct credits AFTER successful processing
       const deducted = await deductCredits(
@@ -262,6 +276,11 @@ export default function HomeContent() {
       setOutputFileURL(url);
       setCurrentStatus(`Success! ${creditCost} credit${creditCost > 1 ? 's' : ''} used`);
     } catch (error) {
+      // Log the full error for debugging
+      console.error('[DEBUG] Background removal error:', error);
+      console.error('[DEBUG] Error type:', typeof error);
+      console.error('[DEBUG] Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+
       // Provide detailed error messages
       let errorMessage = "Error removing background: ";
 
