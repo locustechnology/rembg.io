@@ -8,8 +8,6 @@ import { useSession, signOut } from "@/lib/auth-client";
 import { useAuthStore } from "@/lib/store";
 
 export default function Navbar() {
-  const [aiToolsOpen, setAiToolsOpen] = useState(false);
-  const [developersOpen, setDevelopersOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -54,53 +52,13 @@ export default function Navbar() {
 
           {/* Desktop Navigation Links */}
           <div className="hidden lg:flex items-center space-x-6">
-            <div className="relative">
-              <button
-                className="flex items-center space-x-1 text-gray-700 hover:text-gray-900 transition-colors py-2"
-                onClick={() => setAiToolsOpen(!aiToolsOpen)}
-                onBlur={() => setTimeout(() => setAiToolsOpen(false), 200)}
-              >
-                <span className="font-medium text-sm">AI Tools</span>
-                <ChevronDown className="w-4 h-4" />
-              </button>
-              {aiToolsOpen && (
-                <div className="absolute top-full left-0 mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg py-2 z-50">
-                  <a href="#" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                    Background Remover
-                  </a>
-                  <a href="#" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                    Image Upscaler
-                  </a>
-                  <a href="#" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                    Object Removal
-                  </a>
-                </div>
-              )}
-            </div>
+            <Link href="/contact" className="text-gray-700 hover:text-gray-900 font-medium text-sm transition-colors">
+              Bulk Uploading
+            </Link>
 
-            <div className="relative">
-              <button
-                className="flex items-center space-x-1 text-gray-700 hover:text-gray-900 transition-colors py-2"
-                onClick={() => setDevelopersOpen(!developersOpen)}
-                onBlur={() => setTimeout(() => setDevelopersOpen(false), 200)}
-              >
-                <span className="font-medium text-sm">Developers</span>
-                <ChevronDown className="w-4 h-4" />
-              </button>
-              {developersOpen && (
-                <div className="absolute top-full left-0 mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg py-2 z-50">
-                  <a href="#" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                    API Documentation
-                  </a>
-                  <a href="#" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                    SDK & Libraries
-                  </a>
-                  <a href="#" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                    Code Examples
-                  </a>
-                </div>
-              )}
-            </div>
+            <Link href="/contact" className="text-gray-700 hover:text-gray-900 font-medium text-sm transition-colors">
+              API
+            </Link>
 
             <Link href="/pricing" className="text-gray-700 hover:text-gray-900 font-medium text-sm transition-colors">
               Pricing
@@ -204,56 +162,30 @@ export default function Navbar() {
         {mobileMenuOpen && (
           <div className="lg:hidden border-t border-gray-200 py-4 animate-in slide-in-from-top-2">
             <div className="flex flex-col space-y-3">
-              {/* AI Tools */}
-              <div>
-                <button
-                  onClick={() => setAiToolsOpen(!aiToolsOpen)}
-                  className="flex items-center justify-between w-full px-3 py-2 text-left text-gray-700 hover:bg-gray-50 rounded-lg"
-                >
-                  <span className="font-medium">AI Tools</span>
-                  <ChevronDown className={`w-4 h-4 transition-transform ${aiToolsOpen ? 'rotate-180' : ''}`} />
-                </button>
-                {aiToolsOpen && (
-                  <div className="ml-4 mt-2 space-y-1">
-                    <a href="#" className="block px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg">
-                      Background Remover
-                    </a>
-                    <a href="#" className="block px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg">
-                      Image Upscaler
-                    </a>
-                    <a href="#" className="block px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg">
-                      Object Removal
-                    </a>
-                  </div>
-                )}
-              </div>
+              {/* Bulk Uploading */}
+              <Link
+                href="/contact"
+                className="px-3 py-2 text-gray-700 hover:bg-gray-50 rounded-lg font-medium"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Bulk Uploading
+              </Link>
 
-              {/* Developers */}
-              <div>
-                <button
-                  onClick={() => setDevelopersOpen(!developersOpen)}
-                  className="flex items-center justify-between w-full px-3 py-2 text-left text-gray-700 hover:bg-gray-50 rounded-lg"
-                >
-                  <span className="font-medium">Developers</span>
-                  <ChevronDown className={`w-4 h-4 transition-transform ${developersOpen ? 'rotate-180' : ''}`} />
-                </button>
-                {developersOpen && (
-                  <div className="ml-4 mt-2 space-y-1">
-                    <a href="#" className="block px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg">
-                      API Documentation
-                    </a>
-                    <a href="#" className="block px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg">
-                      SDK & Libraries
-                    </a>
-                    <a href="#" className="block px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg">
-                      Code Examples
-                    </a>
-                  </div>
-                )}
-              </div>
+              {/* API */}
+              <Link
+                href="/contact"
+                className="px-3 py-2 text-gray-700 hover:bg-gray-50 rounded-lg font-medium"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                API
+              </Link>
 
               {/* Pricing */}
-              <Link href="/pricing" className="px-3 py-2 text-gray-700 hover:bg-gray-50 rounded-lg font-medium">
+              <Link
+                href="/pricing"
+                className="px-3 py-2 text-gray-700 hover:bg-gray-50 rounded-lg font-medium"
+                onClick={() => setMobileMenuOpen(false)}
+              >
                 Pricing
               </Link>
 
