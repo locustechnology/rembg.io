@@ -103,8 +103,9 @@ export default function PricingPage() {
       pricePerCredit: "$0",
       features: [
         "5 free credits on signup",
-        "Basic image processing",
-        "Standard quality output",
+        "Unlimited Free model (ISNet)",
+        "No login required for Free model",
+        "2 credits/image for Superior model",
         "PNG & WebP formats",
         "Community support",
       ],
@@ -289,8 +290,21 @@ export default function PricingPage() {
                 What are credits?
               </h3>
               <p className="text-gray-600">
-                Credits are used to process images. Low-resolution images (under 2MB)
-                cost 1 credit, while high-resolution images (2MB+) cost 3 credits.
+                Credits are used to process images with our Superior model (Bria RMBG 2.0).
+                The Free model requires no credits or login. The Superior model costs 2 credits
+                per image and delivers professional-grade results ideal for commercial use.
+              </p>
+            </div>
+
+            <div className="bg-white rounded-xl shadow-lg p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                What's the difference between Free and Superior models?
+              </h3>
+              <p className="text-gray-600">
+                The Free model (ISNet) runs in your browser and produces good quality results
+                without requiring login or credits. The Superior model (Bria RMBG 2.0) is a
+                professional-grade AI model trained on licensed data, offering higher quality
+                results ideal for commercial use at 2 credits per image.
               </p>
             </div>
 

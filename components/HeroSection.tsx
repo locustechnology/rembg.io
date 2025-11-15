@@ -26,13 +26,18 @@ interface HeroSectionProps {
   quality: number;
   setQuality: (value: number) => void;
   processing: boolean;
+  briaProcessing: boolean;
   progress: number;
   currentStatus: string;
   errorMsg: string;
   outputFileURL: string;
   removeBackgroundLocal: () => Promise<void>;
-  creditCost: number;
+  removeBackgroundBria: () => Promise<void>;
+  creditCostFree: number;
+  creditCostBria: number;
   fileSizeMB: string;
+  session: any;
+  credits: number;
 }
 
 export default function HeroSection({
@@ -48,13 +53,18 @@ export default function HeroSection({
   quality,
   setQuality,
   processing,
+  briaProcessing,
   progress,
   currentStatus,
   errorMsg,
   outputFileURL,
   removeBackgroundLocal,
-  creditCost,
+  removeBackgroundBria,
+  creditCostFree,
+  creditCostBria,
   fileSizeMB,
+  session,
+  credits,
 }: HeroSectionProps) {
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0] || null;
@@ -219,17 +229,36 @@ export default function HeroSection({
                 </div>
               </div>
 
-              {/* Credit Cost Information */}
-              {creditCost > 0 && (
-                <div className="mb-3 sm:mb-4 p-3 sm:p-4 bg-blue-50 border border-blue-200 rounded-xl sm:rounded-2xl">
-                  <div className="flex items-center gap-2">
-                    <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-blue-500 rounded-full flex-shrink-0"></div>
-                    <p className="text-xs sm:text-sm font-semibold text-gray-900">
-                      This {fileSizeMB}MB image requires {creditCost} credit{creditCost > 1 ? 's' : ''}
-                    </p>
+              {/* Model Selection Info */}
+              <div className="mb-3 sm:mb-4 p-3 sm:p-4 bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-xl sm:rounded-2xl">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-green-500 rounded-full flex-shrink-0"></div>
+                      <p className="text-xs sm:text-sm font-semibold text-gray-900">
+                        Free Model: 0 credits
+                      </p>
+                    </div>
+                    <span className="text-[10px] sm:text-xs text-gray-600">No login required</span>
                   </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-purple-500 rounded-full flex-shrink-0"></div>
+                      <p className="text-xs sm:text-sm font-semibold text-gray-900">
+                        Superior Model: {creditCostBria} credits
+                      </p>
+                    </div>
+                    <span className="text-[10px] sm:text-xs text-gray-600">Professional quality</span>
+                  </div>
+                  {session?.user && (
+                    <div className="pt-2 border-t border-gray-200">
+                      <p className="text-xs text-gray-600">
+                        Your balance: <span className="font-semibold text-purple-600">{credits} credits</span>
+                      </p>
+                    </div>
+                  )}
                 </div>
-              )}
+              </div>
 
               {/* Advanced Options */}
               <div className="flex-1 space-y-4 sm:space-y-6 mb-4 sm:mb-6">
@@ -314,11 +343,11 @@ export default function HeroSection({
               )}
 
               {/* Processing Progress */}
-              {processing && (
+              {(processing || briaProcessing) && (
                 <div className="mb-3 sm:mb-4 p-3 sm:p-4 rounded-lg sm:rounded-xl bg-purple-50 border border-purple-200">
                   <div className="flex items-center justify-between mb-2">
                     <p className="text-xs sm:text-sm font-semibold text-gray-900">
-                      {currentStatus}
+                      {briaProcessing ? '⭐ ' : ''}{currentStatus}
                     </p>
                     <p className="text-xs sm:text-sm font-semibold text-purple-600">
                       {progress}%
@@ -328,15 +357,58 @@ export default function HeroSection({
                 </div>
               )}
 
-              {/* Action Button - Remove or Download */}
+              {/* Action Buttons - Two Models */}
               {!outputFileURL ? (
-                <Button
-                  onClick={removeBackgroundLocal}
-                  disabled={processing}
-                  className="w-full h-10 sm:h-12 text-sm sm:text-base font-semibold bg-purple-600 hover:bg-purple-700 text-white rounded-lg sm:rounded-xl shadow-lg hover:shadow-xl transition-all disabled:opacity-50"
-                >
-                  {processing ? currentStatus : "Remove Background"}
-                </Button>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+                  {/* Free Model Button */}
+                  <Button
+                    onClick={removeBackgroundLocal}
+                    disabled={processing || briaProcessing}
+                    className="w-full h-12 sm:h-14 text-sm sm:text-base font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-lg sm:rounded-xl shadow-lg hover:shadow-xl transition-all disabled:opacity-50 flex flex-col items-center justify-center gap-1 py-2"
+                  >
+                    {processing ? (
+                      <span className="flex items-center gap-2">
+                        <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                        </svg>
+                        Processing...
+                      </span>
+                    ) : (
+                      <>
+                        <span>Free Model</span>
+                        <span className="text-xs opacity-90">No login • 0 credits</span>
+                      </>
+                    )}
+                  </Button>
+
+                  {/* Superior Bria Model Button */}
+                  <Button
+                    onClick={removeBackgroundBria}
+                    disabled={processing || briaProcessing || !session?.user || credits < creditCostBria}
+                    className="relative w-full h-12 sm:h-14 text-sm sm:text-base font-semibold bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:from-gray-400 disabled:to-gray-500 text-white rounded-lg sm:rounded-xl shadow-lg hover:shadow-xl transition-all transform hover:scale-105 flex flex-col items-center justify-center gap-1 py-2 overflow-hidden"
+                  >
+                    <div className="absolute top-0 right-0 bg-yellow-400 text-black text-[10px] px-2 py-0.5 rounded-bl-lg font-bold">
+                      SUPERIOR
+                    </div>
+                    {briaProcessing ? (
+                      <span className="flex items-center gap-2">
+                        <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                        </svg>
+                        Processing...
+                      </span>
+                    ) : (
+                      <>
+                        <span>Bria RMBG 2.0</span>
+                        <span className="text-xs opacity-90">
+                          {session?.user ? `${creditCostBria} credits` : 'Login required'}
+                        </span>
+                      </>
+                    )}
+                  </Button>
+                </div>
               ) : (
                 <a
                   href={outputFileURL}

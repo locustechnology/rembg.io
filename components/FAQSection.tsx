@@ -26,7 +26,7 @@ export default function FAQSection() {
     },
     {
       question: "Is RemBG free to use?",
-      answer: "Yes! RemBG offers free credits to get started. New users receive 5 free credits upon signup. Each credit allows you to remove the background from one image. Additional credits can be purchased through our affordable pricing plans.",
+      answer: "Yes! RemBG offers a completely free model that requires no login or credits. For users who need professional-grade results, we offer the Superior model (Bria RMBG 2.0) which costs 2 credits per image. New users receive 5 free credits upon signup to try the Superior model.",
     },
     {
       question: "Can I remove backgrounds from multiple images at once?",
@@ -45,8 +45,12 @@ export default function FAQSection() {
       answer: "Not at all! RemBG is designed for everyone, from professionals to beginners. No Photoshop skills required. Simply upload your image, and our AI does all the complex work automatically. You'll get professional results in seconds.",
     },
     {
-      question: "What's the difference between high-res and low-res images?",
-      answer: "Images under 2MB are considered low-res and cost 1 credit. Images 2MB or larger are high-res and cost 3 credits. High-res images require more processing power but deliver exceptional quality for professional use.",
+      question: "What's the difference between Free and Superior models?",
+      answer: "The Free model (ISNet) runs directly in your browser and produces good quality results without requiring login or credits. The Superior model (Bria RMBG 2.0) is a professional-grade AI model trained on licensed data, offering higher quality results ideal for commercial use. It costs 2 credits per image and runs on our servers for optimal performance.",
+    },
+    {
+      question: "Which model should I use?",
+      answer: "Use the Free model for personal projects, quick edits, or testing. It's perfect for social media posts, casual editing, and when you want instant results. Choose the Superior model for professional work, e-commerce product photos, marketing materials, or when you need the highest quality output with precise edge detection and licensed commercial use.",
     },
     {
       question: "Can I use RemBG for commercial purposes?",

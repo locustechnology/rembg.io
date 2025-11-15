@@ -19,7 +19,11 @@ import Footer from "@/components/Footer";
 type DownloadFileType = "image/png" | "image/webp";
 type ModelPrecision = "isnet" | "isnet_fp16" | "isnet_quint8";
 
-// Credit costs based on file size
+// Credit costs for different models
+const CREDIT_COST_FREE = 0; // ISNet free model
+const CREDIT_COST_BRIA = 2; // Bria RMBG 2.0 Superior model
+
+// Legacy credit cost calculation (not used with new dual-model system)
 const calculateCreditCost = (fileSize: number): number => {
   const TWO_MB = 2 * 1024 * 1024;
   return fileSize >= TWO_MB ? 3 : 1; // 3 credits for high-res, 1 for low-res
@@ -30,6 +34,7 @@ export default function HomeContent() {
   const [inputFile, setInputFile] = useState<File | null>(null);
   const [outputFileURL, setOutputFileURL] = useState<string>("");
   const [processing, setProcessing] = useState<boolean>(false);
+  const [briaProcessing, setBriaProcessing] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string>("");
   const [progress, setProgress] = useState<number>(0);
   const [currentStatus, setCurrentStatus] = useState<string>("Processing...");
@@ -192,22 +197,9 @@ export default function HomeContent() {
   };
 
   const removeBackgroundLocal = async (): Promise<void> => {
-    // Check if user is logged in
-    if (!session?.user) {
-      setErrorMsg("Please sign in to remove backgrounds");
-      return;
-    }
-
+    // Free model - no authentication or credits required
     if (!inputFile) {
       setErrorMsg("Please upload an image first");
-      return;
-    }
-
-    // Check if user has enough credits
-    if (credits < creditCost) {
-      setErrorMsg(
-        `Insufficient credits. This ${fileSizeMB}MB image requires ${creditCost} credit${creditCost > 1 ? 's' : ''}, but you only have ${credits}. Please purchase more credits.`
-      );
       return;
     }
 
@@ -233,7 +225,7 @@ export default function HomeContent() {
       });
 
       const blob = await removeBackground(inputFile, {
-        publicPath: 'https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.5.3/dist/',
+        // Use default IMG.LY CDN for models (https://staticimgly.com)
         progress: (key: string, current: number, total: number) => {
           console.log('[DEBUG] Progress:', key, current, total);
           if (key.includes("fetch")) {
@@ -253,28 +245,10 @@ export default function HomeContent() {
 
       console.log('[DEBUG] Background removed successfully');
 
-      // Only deduct credits AFTER successful processing
-      const deducted = await deductCredits(
-        creditCost,
-        `Background removal - ${inputFile.name} (${fileSizeMB}MB)`,
-        {
-          fileName: inputFile.name,
-          fileSize: inputFile.size,
-          fileSizeMB: fileSizeMB,
-          creditCost,
-          timestamp: new Date().toISOString(),
-        }
-      );
-
-      if (!deducted) {
-        setErrorMsg("Processing succeeded but failed to deduct credits. Please contact support.");
-        setProcessing(false);
-        return;
-      }
-
+      // Free model - no credit deduction needed
       const url = URL.createObjectURL(blob);
       setOutputFileURL(url);
-      setCurrentStatus(`Success! ${creditCost} credit${creditCost > 1 ? 's' : ''} used`);
+      setCurrentStatus('Success! Free model used - no credits charged');
     } catch (error) {
       // Log the full error for debugging
       console.error('[DEBUG] Background removal error:', error);
@@ -312,6 +286,129 @@ export default function HomeContent() {
     }
   };
 
+  const removeBackgroundBria = async (): Promise<void> => {
+    // Check if user is logged in
+    if (!session?.user) {
+      setErrorMsg("Please sign in to use the Superior Bria model");
+      toast.error("Login required for Superior model");
+      return;
+    }
+
+    if (!inputFile) {
+      setErrorMsg("Please upload an image first");
+      return;
+    }
+
+    // Check if user has enough credits
+    if (credits < CREDIT_COST_BRIA) {
+      setErrorMsg(
+        `Insufficient credits. Bria Superior model requires ${CREDIT_COST_BRIA} credits, but you only have ${credits}. Please purchase more credits.`
+      );
+      toast.error(`Need ${CREDIT_COST_BRIA} credits (you have ${credits})`);
+      return;
+    }
+
+    setBriaProcessing(true);
+    setErrorMsg("");
+    setOutputFileURL("");
+    setProgress(0);
+
+    try {
+      console.log('[BRIA] Starting Superior model background removal');
+      setCurrentStatus("Uploading image...");
+
+      // 1. Upload image to get public URL
+      const formData = new FormData();
+      formData.append('file', inputFile);
+
+      const uploadResponse = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!uploadResponse.ok) {
+        const error = await uploadResponse.json();
+        throw new Error(error.details || 'Failed to upload image');
+      }
+
+      const { url: imageUrl } = await uploadResponse.json();
+      console.log('[BRIA] Image uploaded:', imageUrl);
+
+      // 2. Process with Bria Superior model
+      setCurrentStatus("Processing with Superior AI model...");
+      setProgress(50);
+
+      const briaResponse = await fetch('/api/background-removal/bria', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          imageUrl,
+          fileName: inputFile.name,
+          fileSize: inputFile.size,
+        }),
+      });
+
+      if (!briaResponse.ok) {
+        const error = await briaResponse.json();
+
+        // Handle insufficient credits error specifically
+        if (briaResponse.status === 402) {
+          throw new Error(error.message || 'Insufficient credits');
+        }
+
+        throw new Error(error.details || 'Bria processing failed');
+      }
+
+      const result = await briaResponse.json();
+      console.log('[BRIA] Processing successful:', result);
+
+      // 3. Download processed image as blob
+      setCurrentStatus("Downloading result...");
+      setProgress(90);
+
+      const imageResponse = await fetch(result.imageUrl);
+      if (!imageResponse.ok) {
+        throw new Error('Failed to download processed image');
+      }
+
+      const blob = await imageResponse.blob();
+      const blobUrl = URL.createObjectURL(blob);
+
+      setOutputFileURL(blobUrl);
+      setCurrentStatus(`Success! ${CREDIT_COST_BRIA} credits used`);
+      setProgress(100);
+
+      // Update credits in store
+      await fetchCredits();
+
+      console.log('[BRIA] Background removed successfully');
+      toast.success(
+        `Superior quality! ${CREDIT_COST_BRIA} credits used. New balance: ${result.newBalance} credits`,
+        { duration: 5000 }
+      );
+
+    } catch (error: any) {
+      console.error('[BRIA] Error:', error);
+
+      let errorMessage = `Error with Superior model: ${error.message}`;
+
+      // Provide helpful error messages
+      if (error.message.includes('upload')) {
+        errorMessage = "Failed to upload image. Please check your internet connection and try again.";
+      } else if (error.message.includes('credits')) {
+        errorMessage = error.message; // Use the specific credit error message
+      } else if (error.message.includes('configured')) {
+        errorMessage = "Superior model is temporarily unavailable. Please try the free model or contact support.";
+      }
+
+      setErrorMsg(errorMessage);
+      toast.error(errorMessage, { duration: 7000 });
+    } finally {
+      setBriaProcessing(false);
+      setProgress(0);
+    }
+  };
+
   return (
     <div>
       <Navbar />
@@ -321,6 +418,7 @@ export default function HomeContent() {
         setInputFile={setInputFile}
         outputFileURL={outputFileURL}
         processing={processing}
+        briaProcessing={briaProcessing}
         errorMsg={errorMsg}
         progress={progress}
         currentStatus={currentStatus}
@@ -333,8 +431,12 @@ export default function HomeContent() {
         handleUploadClick={handleUploadClick}
         resetUpload={resetUpload}
         removeBackgroundLocal={removeBackgroundLocal}
-        creditCost={creditCost}
+        removeBackgroundBria={removeBackgroundBria}
+        creditCostFree={CREDIT_COST_FREE}
+        creditCostBria={CREDIT_COST_BRIA}
         fileSizeMB={fileSizeMB}
+        session={session}
+        credits={credits}
       />
       <LogoMarquee />
       <FeaturesDetailSection />
