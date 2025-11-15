@@ -15,7 +15,7 @@ type ModelPrecision = "isnet" | "isnet_fp16" | "isnet_quint8";
 
 interface HeroSectionProps {
   fileInputRef: RefObject<HTMLInputElement>;
-  onUploadClick: () => void;
+  handleUploadClick: () => void;
   inputFile: File | null;
   setInputFile: (file: File | null) => void;
   resetUpload: () => void;
@@ -37,7 +37,7 @@ interface HeroSectionProps {
 
 export default function HeroSection({
   fileInputRef,
-  onUploadClick,
+  handleUploadClick,
   inputFile,
   setInputFile,
   resetUpload,
@@ -168,7 +168,7 @@ export default function HeroSection({
               {/* Upload Section - Top/Center */}
               <div className="flex flex-col items-center justify-center flex-1">
                 <Button
-                  onClick={onUploadClick}
+                  onClick={handleUploadClick}
                   size="lg"
                   className="bg-purple-600 hover:bg-purple-700 text-white px-6 sm:px-8 lg:px-10 py-4 sm:py-5 lg:py-7 text-sm sm:text-base font-semibold h-auto rounded-full mb-2 sm:mb-3 shadow-lg hover:shadow-xl transition-all"
                 >
