@@ -7,7 +7,6 @@ import { useAuthStore } from "@/lib/store";
 import { useSearchParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { compressImage, shouldCompressImage, getOptimalCompressionSettings } from "@/lib/imageUtils";
-import { logSessionDebug, checkSessionMismatch } from "@/lib/session-debug";
 import HeroSection from "@/components/HeroSection";
 import Navbar from "@/components/Navbar";
 import LogoMarquee from "@/components/LogoMarquee";
@@ -51,13 +50,6 @@ export default function HomeContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Debug session on mount
-  useEffect(() => {
-    console.log("🏠 HOME PAGE MOUNTED");
-    logSessionDebug();
-    checkSessionMismatch();
-  }, []);
 
   // Check if model is cached on component mount and preload if not cached
   useEffect(() => {
