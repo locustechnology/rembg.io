@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown } from "lucide-react";
+import { Plus, Minus } from "lucide-react";
 
 interface FAQ {
   question: string;
@@ -66,43 +66,39 @@ export default function FAQSection() {
     <section className="w-full bg-white py-20">
       <div className="max-w-4xl mx-auto px-6">
         {/* Section Title */}
-        <div className="text-center mb-12">
+        <div className="text-center mb-16">
           <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-            Frequently asked questions
+            Background remover: your questions answered
           </h2>
-          <p className="text-lg text-gray-600">
-            Everything you need to know about RemBG's AI background remover
-          </p>
         </div>
 
         {/* FAQ Accordion */}
-        <div className="space-y-4">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
           {faqs.map((faq, index) => (
-            <div
-              key={index}
-              className="bg-white border-2 border-gray-200 rounded-2xl overflow-hidden hover:border-purple-300 transition-all duration-300 shadow-sm hover:shadow-md"
-            >
+            <div key={index} className="border-b border-gray-200 last:border-b-0">
               <button
                 onClick={() => toggleFAQ(index)}
-                className="w-full px-6 py-5 flex items-center justify-between text-left focus:outline-none group"
+                className="w-full flex items-center justify-between p-6 md:p-8 text-left hover:bg-gray-50 transition-colors duration-200"
               >
-                <span className="text-lg font-semibold text-gray-900 pr-8 group-hover:text-purple-600 transition-colors duration-200">
+                <span className="text-lg md:text-xl font-semibold text-gray-900 pr-8">
                   {faq.question}
                 </span>
-                <ChevronDown
-                  className={`flex-shrink-0 w-6 h-6 text-purple-600 transition-transform duration-300 ${
-                    openIndex === index ? "rotate-180" : ""
-                  }`}
-                />
+                <div className="flex-shrink-0">
+                  {openIndex === index ? (
+                    <Minus className="w-6 h-6 text-gray-900 transition-transform duration-300" />
+                  ) : (
+                    <Plus className="w-6 h-6 text-gray-900 transition-transform duration-300" />
+                  )}
+                </div>
               </button>
 
               <div
-                className={`overflow-hidden transition-all duration-500 ease-in-out ${
-                  openIndex === index ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
+                className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                  openIndex === index ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
                 }`}
               >
-                <div className="px-6 pb-5 pt-2">
-                  <p className="text-gray-600 leading-relaxed">
+                <div className="px-6 md:px-8 pb-6 md:pb-8">
+                  <p className="text-gray-600 leading-relaxed text-base md:text-lg">
                     {faq.answer}
                   </p>
                 </div>
@@ -119,7 +115,10 @@ export default function FAQSection() {
           <p className="text-gray-600 mb-4">
             Can't find the answer you're looking for? Please reach out to our team.
           </p>
-          <button className="px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white font-semibold rounded-full hover:shadow-lg transition-all duration-300 hover:scale-105">
+          <button
+            onClick={() => window.location.href = '/contact'}
+            className="px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white font-semibold rounded-full hover:shadow-lg transition-all duration-300 hover:scale-105"
+          >
             Contact Support
           </button>
         </div>

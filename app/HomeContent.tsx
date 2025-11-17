@@ -6,6 +6,7 @@ import { useSession } from "@/lib/auth-client";
 import { useAuthStore } from "@/lib/store";
 import { useSearchParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { compressImage, shouldCompressImage, getOptimalCompressionSettings } from "@/lib/imageUtils";
 import HeroSection from "@/components/HeroSection";
 import Navbar from "@/components/Navbar";
 import LogoMarquee from "@/components/LogoMarquee";
@@ -41,6 +42,7 @@ export default function HomeContent() {
   const [modelPrecision, setModelPrecision] = useState<ModelPrecision>("isnet_fp16");
   const [imageDownloadType, setImageDownloadType] = useState<DownloadFileType>("image/png");
   const [quality, setQuality] = useState<number>(100);
+  const [isModelCached, setIsModelCached] = useState<boolean>(false);
 
   // Auth and credits
   const { data: session } = useSession();
@@ -48,6 +50,65 @@ export default function HomeContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Check if model is cached on component mount and preload if not cached
+  useEffect(() => {
+    const cached = sessionStorage.getItem('rembg_model_cached');
+    if (cached === 'true') {
+      setIsModelCached(true);
+    } else {
+      // Preload model in background after a short delay (to not block initial page load)
+      const preloadTimeout = setTimeout(() => {
+        preloadModel();
+      }, 2000); // Wait 2 seconds after page load
+
+      return () => clearTimeout(preloadTimeout);
+    }
+  }, []);
+
+  // Preload model in background
+  const preloadModel = async () => {
+    try {
+      console.log('[PRELOAD] Starting background model preload');
+
+      // Create a tiny 1x1 transparent image for model initialization
+      const canvas = document.createElement('canvas');
+      canvas.width = 1;
+      canvas.height = 1;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+
+      // Create blob from canvas
+      const blob = await new Promise<Blob>((resolve) => {
+        canvas.toBlob((b) => {
+          if (b) resolve(b);
+        }, 'image/png');
+      });
+
+      const dummyFile = new File([blob], 'preload.png', { type: 'image/png' });
+
+      // Trigger model download (but don't process)
+      await removeBackground(dummyFile, {
+        progress: (key: string, current: number, total: number) => {
+          if (key.includes("fetch") && current === total) {
+            console.log('[PRELOAD] Model preloaded successfully');
+            sessionStorage.setItem('rembg_model_cached', 'true');
+            setIsModelCached(true);
+          }
+        },
+        model: modelPrecision,
+        output: {
+          format: 'image/png',
+          quality: 0.8,
+        },
+      });
+
+      console.log('[PRELOAD] Model preload complete');
+    } catch (error) {
+      console.log('[PRELOAD] Preload failed (non-critical):', error);
+      // Fail silently - user can still use the app
+    }
+  };
 
   // No ONNX configuration needed - library handles this via publicPath in removeBackground options
 
@@ -229,7 +290,17 @@ export default function HomeContent() {
         progress: (key: string, current: number, total: number) => {
           console.log('[DEBUG] Progress:', key, current, total);
           if (key.includes("fetch")) {
-            setCurrentStatus("Fetching model...");
+            // Only show "Fetching model..." if model is not cached
+            if (!isModelCached) {
+              setCurrentStatus("Loading AI model (one-time download)...");
+            } else {
+              setCurrentStatus("Initializing...");
+            }
+            // Mark model as cached after first fetch
+            if (!isModelCached && current === total) {
+              sessionStorage.setItem('rembg_model_cached', 'true');
+              setIsModelCached(true);
+            }
           }
           if (key.includes("compute")) {
             setProgress(Math.round((current / total) * 100));
@@ -315,11 +386,26 @@ export default function HomeContent() {
 
     try {
       console.log('[BRIA] Starting Superior model background removal');
+
+      // 1. Compress image if needed (for faster upload)
+      let fileToUpload = inputFile;
+      if (shouldCompressImage(inputFile)) {
+        setCurrentStatus("Optimizing image...");
+        console.log('[BRIA] Compressing image for faster upload');
+        const compressionSettings = getOptimalCompressionSettings(inputFile.size);
+        fileToUpload = await compressImage(inputFile, compressionSettings);
+        console.log('[BRIA] Image compressed:', {
+          original: inputFile.size,
+          compressed: fileToUpload.size,
+          reduction: `${Math.round((1 - fileToUpload.size / inputFile.size) * 100)}%`
+        });
+      }
+
       setCurrentStatus("Uploading image...");
 
-      // 1. Upload image to get public URL
+      // 2. Upload image to get public URL
       const formData = new FormData();
-      formData.append('file', inputFile);
+      formData.append('file', fileToUpload);
 
       const uploadResponse = await fetch('/api/upload', {
         method: 'POST',
@@ -334,7 +420,7 @@ export default function HomeContent() {
       const { url: imageUrl } = await uploadResponse.json();
       console.log('[BRIA] Image uploaded:', imageUrl);
 
-      // 2. Process with Bria Superior model
+      // 3. Process with Bria Superior model
       setCurrentStatus("Processing with Superior AI model...");
       setProgress(50);
 

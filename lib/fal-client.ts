@@ -39,7 +39,7 @@ export async function removeBackgroundBria(
     const result = await fal.subscribe<
       BriaRemoveBackgroundInput,
       BriaRemoveBackgroundOutput
-    >(process.env.FAL_BRIA_MODEL_ID || "fal-ai/rmbg-v2", {
+    >(process.env.FAL_BRIA_MODEL_ID || "fal-ai/bria/background/remove", {
       input: {
         image_url: imageUrl,
       },

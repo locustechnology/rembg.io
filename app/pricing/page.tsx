@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Check, Sparkles, Zap, Crown, ArrowRight, Loader2, X } from "lucide-react";
+import { Check, X, Plus, Minus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -23,7 +23,8 @@ export default function PricingPage() {
   const [plans, setPlans] = useState<PaymentPlan[]>([]);
   const [loading, setLoading] = useState(true);
   const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
-  const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'yearly'>('monthly');
+  const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'annually'>('monthly');
+  const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
 
   // Fetch payment plans from API
   useEffect(() => {
@@ -81,7 +82,7 @@ export default function PricingPage() {
   // Filter plans by billing period
   const getFilteredPlans = () => {
     return plans.filter(plan => {
-      if (billingPeriod === 'yearly') {
+      if (billingPeriod === 'annually') {
         return plan.name.includes('Yearly');
       } else {
         return !plan.name.includes('Yearly');
@@ -138,63 +139,58 @@ export default function PricingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50">
+    <div className="min-h-screen bg-gradient-to-b from-purple-50/30 to-white">
       <Navbar />
 
       <div className="pt-24 pb-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
 
           {/* Header */}
-          <div className="text-center mb-16">
-            <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold text-gray-900 mb-6">
+          <div className="text-center mb-12">
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 mb-4">
               Choose Your{" "}
               <span className="bg-gradient-to-r from-purple-600 via-blue-600 to-purple-600 bg-clip-text text-transparent">
                 Perfect Plan
               </span>
             </h1>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto mb-12">
+            <p className="text-lg text-gray-600 max-w-2xl mx-auto mb-8">
               Start with our free model. Upgrade to Superior AI when you need professional results.
             </p>
 
             {/* Billing Toggle */}
-            <div className="inline-flex items-center gap-4 p-1.5 bg-white rounded-full shadow-lg border border-gray-200">
-              <button
-                onClick={() => setBillingPeriod('monthly')}
-                className={`px-8 py-3 rounded-full font-semibold transition-all duration-300 ${
-                  billingPeriod === 'monthly'
-                    ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-lg'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
+            <div className="flex justify-center items-center gap-3">
+              <span className={`text-base font-medium ${billingPeriod === 'monthly' ? 'text-gray-900' : 'text-gray-500'}`}>
                 Monthly
-              </button>
+              </span>
               <button
-                onClick={() => setBillingPeriod('yearly')}
-                className={`px-8 py-3 rounded-full font-semibold transition-all duration-300 relative ${
-                  billingPeriod === 'yearly'
-                    ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-lg'
-                    : 'text-gray-600 hover:text-gray-900'
+                onClick={() => setBillingPeriod(billingPeriod === 'monthly' ? 'annually' : 'monthly')}
+                className={`relative inline-flex h-7 w-14 items-center rounded-full transition-colors ${
+                  billingPeriod === 'annually' ? 'bg-purple-600' : 'bg-gray-300'
                 }`}
               >
-                Yearly
-                <span className="absolute -top-2 -right-2 bg-green-500 text-white text-xs px-2 py-0.5 rounded-full font-bold">
-                  Save 20%
-                </span>
+                <span
+                  className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${
+                    billingPeriod === 'annually' ? 'translate-x-8' : 'translate-x-1'
+                  }`}
+                />
               </button>
+              <span className={`text-base font-medium ${billingPeriod === 'annually' ? 'text-gray-900' : 'text-gray-500'}`}>
+                Annually
+              </span>
+              {billingPeriod === 'annually' && (
+                <span className="ml-2 bg-purple-600 text-white text-xs px-2.5 py-1 rounded-full font-bold">
+                  20% off
+                </span>
+              )}
             </div>
           </div>
 
-          {/* Pricing Cards */}
+          {/* Pricing Cards - 3 Cards */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 max-w-6xl mx-auto mb-20">
 
             {/* Free Tier */}
-            <div className="relative bg-white rounded-3xl shadow-xl border-2 border-gray-200 overflow-hidden transition-all duration-300 hover:shadow-2xl hover:scale-105">
+            <div className="relative bg-white rounded-3xl border-2 border-gray-200 overflow-hidden hover:shadow-xl transition-all duration-300">
               <div className="p-8">
-                <div className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-full mb-6">
-                  <Sparkles className="w-4 h-4 text-gray-600" />
-                  <span className="text-sm font-semibold text-gray-700">Free Forever</span>
-                </div>
-
                 <h3 className="text-2xl font-bold text-gray-900 mb-2">Free</h3>
                 <p className="text-gray-600 mb-6">Perfect to get started</p>
 
@@ -210,76 +206,65 @@ export default function PricingPage() {
 
                 <Button
                   onClick={() => window.location.href = '/'}
-                  className="w-full bg-gray-900 hover:bg-gray-800 text-white py-6 rounded-xl font-semibold text-lg transition-all duration-300"
+                  variant="outline"
+                  className="w-full py-6 rounded-xl font-medium text-base border-2 border-purple-600 text-purple-600 hover:bg-purple-50 transition-all duration-300"
                 >
                   Get Started Free
-                  <ArrowRight className="ml-2 w-5 h-5" />
                 </Button>
 
-                <ul className="mt-8 space-y-4">
+                <ul className="mt-8 space-y-3">
                   <li className="flex items-start gap-3">
-                    <div className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <Check className="w-3 h-3 text-green-600" />
-                    </div>
-                    <span className="text-gray-700">Unlimited Free model (ISNet)</span>
+                    <Check className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" />
+                    <span className="text-gray-700 text-sm">Unlimited Free model (ISNet)</span>
                   </li>
                   <li className="flex items-start gap-3">
-                    <div className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <Check className="w-3 h-3 text-green-600" />
-                    </div>
-                    <span className="text-gray-700">5 credits for Superior model</span>
+                    <Check className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" />
+                    <span className="text-gray-700 text-sm">5 credits for Superior model</span>
                   </li>
                   <li className="flex items-start gap-3">
-                    <div className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <Check className="w-3 h-3 text-green-600" />
-                    </div>
-                    <span className="text-gray-700">No login required for free model</span>
+                    <Check className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" />
+                    <span className="text-gray-700 text-sm">No login required for free model</span>
                   </li>
                   <li className="flex items-start gap-3">
-                    <div className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <Check className="w-3 h-3 text-green-600" />
-                    </div>
-                    <span className="text-gray-700">All output formats</span>
+                    <Check className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" />
+                    <span className="text-gray-700 text-sm">All output formats</span>
                   </li>
                   <li className="flex items-start gap-3">
-                    <div className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <Check className="w-3 h-3 text-green-600" />
-                    </div>
-                    <span className="text-gray-700">Community support</span>
+                    <Check className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" />
+                    <span className="text-gray-700 text-sm">Community support</span>
                   </li>
                 </ul>
               </div>
             </div>
 
-            {/* Paid Plans */}
+            {/* Paid Plans from API */}
             {filteredPlans.map((plan, index) => {
               const isPopular = plan.name.includes('Starter');
               const savings = getSavingsPercentage(plan);
-              const Icon = plan.name.includes('Premium') ? Crown : Zap;
+              const baseName = plan.name.replace(' Yearly', '');
+
+              // Calculate monthly price for yearly plans
+              const displayPrice = plan.name.includes('Yearly')
+                ? (plan.price / 12).toFixed(2)
+                : plan.price;
 
               return (
                 <div
                   key={plan.id}
-                  className={`relative bg-white rounded-3xl shadow-xl overflow-hidden transition-all duration-300 hover:shadow-2xl hover:scale-105 ${
-                    isPopular ? 'ring-4 ring-purple-600 ring-opacity-50 lg:scale-105' : 'border-2 border-gray-200'
-                  }`}
+                  className="relative bg-white rounded-3xl border-2 border-gray-200 overflow-hidden hover:shadow-xl transition-all duration-300"
                 >
-                  {isPopular && (
-                    <div className="absolute top-0 left-0 right-0 bg-gradient-to-r from-purple-600 to-blue-600 text-white text-center py-2 text-sm font-bold">
-                      🔥 MOST POPULAR
+                  {/* Best Value Badge for yearly plans */}
+                  {plan.name.includes('Yearly') && (
+                    <div className="absolute top-0 right-0 w-40 h-40 overflow-hidden">
+                      <div className="absolute top-7 -right-10 w-56 bg-purple-600 text-white text-center py-1.5 text-xs font-bold transform rotate-45 shadow-md">
+                        BEST VALUE
+                      </div>
                     </div>
                   )}
 
-                  <div className={`p-8 ${isPopular ? 'pt-14' : ''}`}>
-                    <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-100 to-blue-100 rounded-full mb-6">
-                      <Icon className="w-4 h-4 text-purple-600" />
-                      <span className="text-sm font-semibold text-purple-700">
-                        {plan.name.replace(' Yearly', '')}
-                      </span>
-                    </div>
-
+                  <div className="p-8">
                     <h3 className="text-2xl font-bold text-gray-900 mb-2">
-                      {plan.name.replace(' Yearly', '')}
+                      {baseName}
                     </h3>
                     <p className="text-gray-600 mb-6">
                       {plan.name.includes('Premium') ? 'For power users' : 'For regular use'}
@@ -287,20 +272,20 @@ export default function PricingPage() {
 
                     <div className="mb-8">
                       <div className="flex items-baseline gap-2 mb-2">
-                        <span className="text-5xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-                          ${plan.price}
+                        <span className="text-5xl font-bold text-gray-900">
+                          ${displayPrice}
                         </span>
-                        <span className="text-gray-600">
-                          /{billingPeriod === 'yearly' ? 'year' : 'month'}
-                        </span>
+                        <span className="text-gray-600">/month</span>
                       </div>
 
-                      {billingPeriod === 'yearly' && savings > 0 && (
-                        <div className="inline-flex items-center gap-2 px-3 py-1 bg-green-100 rounded-full">
-                          <span className="text-sm font-semibold text-green-700">
-                            Save {savings}% vs monthly
-                          </span>
-                        </div>
+                      {plan.name.includes('Yearly') && (
+                        <p className="text-sm text-gray-500 mt-1">
+                          ${plan.price.toFixed(2)} billed yearly
+                        </p>
+                      )}
+
+                      {!plan.name.includes('Yearly') && (
+                        <p className="text-sm text-gray-500 mt-1">Billed once</p>
                       )}
 
                       <p className="text-sm text-gray-600 mt-3">
@@ -311,32 +296,21 @@ export default function PricingPage() {
                     <Button
                       onClick={() => handleSelectPlan(plan.id, plan.price)}
                       disabled={checkoutLoading !== null || loading}
-                      className={`w-full py-6 rounded-xl font-semibold text-lg transition-all duration-300 ${
+                      variant={isPopular ? 'default' : 'outline'}
+                      className={`w-full py-6 rounded-xl font-medium text-base transition-all duration-300 ${
                         isPopular
-                          ? 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white shadow-lg'
-                          : 'bg-gray-900 hover:bg-gray-800 text-white'
+                          ? 'bg-purple-600 hover:bg-purple-700 text-white'
+                          : 'border-2 border-purple-600 text-purple-600 hover:bg-purple-50'
                       }`}
                     >
-                      {checkoutLoading === plan.id ? (
-                        <>
-                          <Loader2 className="mr-2 w-5 h-5 animate-spin" />
-                          Processing...
-                        </>
-                      ) : (
-                        <>
-                          {session?.user ? 'Select Plan' : 'Sign Up to Select'}
-                          <ArrowRight className="ml-2 w-5 h-5" />
-                        </>
-                      )}
+                      {checkoutLoading === plan.id ? 'Processing...' : session?.user ? 'Subscribe now' : 'Sign Up to Subscribe'}
                     </Button>
 
-                    <ul className="mt-8 space-y-4">
+                    <ul className="mt-8 space-y-3">
                       {getPlanFeatures(plan.name, plan.credits).map((feature, i) => (
                         <li key={i} className="flex items-start gap-3">
-                          <div className="w-5 h-5 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                            <Check className="w-3 h-3 text-purple-600" />
-                          </div>
-                          <span className="text-gray-700">{feature}</span>
+                          <Check className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" />
+                          <span className="text-gray-700 text-sm">{feature}</span>
                         </li>
                       ))}
                     </ul>
@@ -346,69 +320,69 @@ export default function PricingPage() {
             })}
           </div>
 
-          {/* FAQ Section */}
-          <div className="max-w-4xl mx-auto mt-32">
-            <h2 className="text-4xl font-bold text-center text-gray-900 mb-4">
-              Frequently Asked Questions
+          {/* FAQ Section - Accordion Style */}
+          <div className="max-w-4xl mx-auto mt-32 mb-20">
+            <h2 className="text-4xl md:text-5xl font-bold text-center text-gray-900 mb-16">
+              Background remover: your questions answered
             </h2>
-            <p className="text-center text-gray-600 mb-12">
-              Everything you need to know about RemBG pricing
-            </p>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100 hover:shadow-xl transition-all duration-300">
-                <h3 className="text-lg font-bold text-gray-900 mb-3">
-                  What are credits?
-                </h3>
-                <p className="text-gray-600 leading-relaxed">
-                  Credits are used for our Superior AI model (Bria RMBG 2.0). The free model requires no credits. Superior model costs 2 credits per image.
-                </p>
-              </div>
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+              {[
+                {
+                  question: "What are credits?",
+                  answer: "Credits are used for our Superior AI model (Bria RMBG 2.0). The free model requires no credits and you can use it unlimited times. The Superior model costs 2 credits per image and delivers professional-grade results."
+                },
+                {
+                  question: "Do credits expire?",
+                  answer: "No! Your credits never expire. Use them whenever you need professional-quality background removal results. They stay in your account until you use them."
+                },
+                {
+                  question: "Can I switch plans anytime?",
+                  answer: "Yes! You can upgrade or change plans anytime. Unused credits roll over to your new plan, so you never lose what you've purchased."
+                },
+                {
+                  question: "What's the free model?",
+                  answer: "ISNet is our free AI model that runs directly in your browser. It requires no login, works great for casual use, and is perfect for getting started with background removal!"
+                },
+                {
+                  question: "What's the Superior model?",
+                  answer: "Bria RMBG 2.0 is our professional AI model trained on licensed data, delivering exceptional quality for commercial use. It provides the highest accuracy and handles complex backgrounds with ease."
+                },
+                {
+                  question: "How can I get more credits?",
+                  answer: "You can purchase additional credits anytime by selecting one of our credit packages above. For high-volume needs, contact us for custom enterprise plans with dedicated support."
+                }
+              ].map((faq, index) => (
+                <div key={index} className="border-b border-gray-200 last:border-b-0">
+                  <button
+                    onClick={() => setOpenFaqIndex(openFaqIndex === index ? null : index)}
+                    className="w-full flex items-center justify-between p-6 md:p-8 text-left hover:bg-gray-50 transition-colors duration-200"
+                  >
+                    <span className="text-lg md:text-xl font-semibold text-gray-900 pr-8">
+                      {faq.question}
+                    </span>
+                    <div className="flex-shrink-0">
+                      {openFaqIndex === index ? (
+                        <Minus className="w-6 h-6 text-gray-900 transition-transform duration-300" />
+                      ) : (
+                        <Plus className="w-6 h-6 text-gray-900 transition-transform duration-300" />
+                      )}
+                    </div>
+                  </button>
 
-              <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100 hover:shadow-xl transition-all duration-300">
-                <h3 className="text-lg font-bold text-gray-900 mb-3">
-                  Do credits expire?
-                </h3>
-                <p className="text-gray-600 leading-relaxed">
-                  No! Your credits never expire. Use them whenever you need professional-quality results.
-                </p>
-              </div>
-
-              <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100 hover:shadow-xl transition-all duration-300">
-                <h3 className="text-lg font-bold text-gray-900 mb-3">
-                  Can I switch plans?
-                </h3>
-                <p className="text-gray-600 leading-relaxed">
-                  Yes! You can upgrade or change plans anytime. Unused credits roll over to your new plan.
-                </p>
-              </div>
-
-              <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100 hover:shadow-xl transition-all duration-300">
-                <h3 className="text-lg font-bold text-gray-900 mb-3">
-                  What's the free model?
-                </h3>
-                <p className="text-gray-600 leading-relaxed">
-                  ISNet runs in your browser, requires no login, and works great for casual use. Perfect for getting started!
-                </p>
-              </div>
-
-              <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100 hover:shadow-xl transition-all duration-300">
-                <h3 className="text-lg font-bold text-gray-900 mb-3">
-                  What's the Superior model?
-                </h3>
-                <p className="text-gray-600 leading-relaxed">
-                  Bria RMBG 2.0 is a professional AI model trained on licensed data, delivering exceptional quality for commercial use.
-                </p>
-              </div>
-
-              <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100 hover:shadow-xl transition-all duration-300">
-                <h3 className="text-lg font-bold text-gray-900 mb-3">
-                  Need more credits?
-                </h3>
-                <p className="text-gray-600 leading-relaxed">
-                  Contact us for custom enterprise plans with higher credit limits and dedicated support.
-                </p>
-              </div>
+                  <div
+                    className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                      openFaqIndex === index ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+                    }`}
+                  >
+                    <div className="px-6 md:px-8 pb-6 md:pb-8">
+                      <p className="text-gray-600 leading-relaxed text-base md:text-lg">
+                        {faq.answer}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
 

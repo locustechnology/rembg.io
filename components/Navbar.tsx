@@ -4,6 +4,7 @@ import { ChevronDown, LogOut, User, CreditCard, Menu, X } from "lucide-react";
 import { Button } from "./ui/button";
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useSession, signOut } from "@/lib/auth-client";
 import { useAuthStore } from "@/lib/store";
 
@@ -36,18 +37,24 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-14 sm:h-16">
           {/* Logo */}
-          <Link href="/" className="flex items-center space-x-2 flex-shrink-0">
-            <div className="w-7 h-7 sm:w-8 sm:h-8 bg-gradient-to-br from-purple-600 to-indigo-600 rounded-lg flex items-center justify-center">
-              <div className="grid grid-cols-2 gap-0.5 w-4 h-4 sm:w-5 sm:h-5">
-                <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-white rounded-sm"></div>
-                <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-white/70 rounded-sm"></div>
-                <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-white/70 rounded-sm"></div>
-                <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-white rounded-sm"></div>
-              </div>
+          <Link href="/" className="flex items-center gap-3 flex-shrink-0">
+            {/* Column 1: Logo Image */}
+            <Image
+              src="/rembg_photo_2025-11-17_13-29-10_2025-11-17_07-59-47_isnet.png"
+              alt="RemBG Logo"
+              width={48}
+              height={48}
+              className="w-10 h-10 sm:w-12 sm:h-12 object-contain"
+            />
+            {/* Column 2: Text with two rows */}
+            <div className="flex flex-col">
+              <span className="text-lg sm:text-xl font-bold text-gray-900 leading-tight">
+                RemBG
+              </span>
+              <span className="text-xs sm:text-sm text-gray-500 leading-tight">
+                by GoStudio.ai
+              </span>
             </div>
-            <span className="text-lg sm:text-xl font-semibold text-gray-900">
-              RemBG
-            </span>
           </Link>
 
           {/* Desktop Navigation Links */}

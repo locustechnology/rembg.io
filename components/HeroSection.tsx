@@ -1,7 +1,7 @@
 "use client";
 
-import { RefObject } from "react";
-import { Plus, Crown, Bolt, UploadIcon, Download } from "lucide-react";
+import { RefObject, useState } from "react";
+import { Plus, Crown, Bolt, UploadIcon, Download, Link as LinkIcon } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { ImgComparisonSlider } from '@img-comparison-slider/react';
@@ -66,6 +66,10 @@ export default function HeroSection({
   session,
   credits,
 }: HeroSectionProps) {
+  const [isDragging, setIsDragging] = useState(false);
+  const [urlInput, setUrlInput] = useState("");
+  const [isLoadingUrl, setIsLoadingUrl] = useState(false);
+
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0] || null;
     if (file) {
@@ -75,15 +79,96 @@ export default function HeroSection({
     }
   };
 
+  // Drag & Drop Handlers
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    const files = e.dataTransfer.files;
+    if (files && files[0]) {
+      const file = files[0];
+      if (file.type.startsWith("image/")) {
+        setInputFile(file);
+      }
+    }
+  };
+
+  // URL to File Converter
+  const urlToFile = async (url: string): Promise<File | null> => {
+    try {
+      const response = await fetch(url);
+      if (!response.ok) throw new Error('Failed to fetch image');
+
+      const blob = await response.blob();
+      if (!blob.type.startsWith('image/')) {
+        throw new Error('URL does not point to an image');
+      }
+
+      const filename = url.split('/').pop() || 'image.jpg';
+      return new File([blob], filename, { type: blob.type });
+    } catch (error) {
+      console.error('Error loading image from URL:', error);
+      return null;
+    }
+  };
+
+  // Handle URL Paste
+  const handleUrlPaste = async () => {
+    if (!urlInput.trim()) return;
+
+    setIsLoadingUrl(true);
+    const file = await urlToFile(urlInput);
+    setIsLoadingUrl(false);
+
+    if (file) {
+      setInputFile(file);
+      setUrlInput("");
+    }
+  };
+
+  // Handle Demo Image Click
+  const handleDemoImageClick = async (imageUrl: string) => {
+    const file = await urlToFile(imageUrl);
+    if (file) {
+      setInputFile(file);
+    }
+  };
+
   const fileName = () => {
     let nameWithoutExtention = inputFile?.name;
     if (nameWithoutExtention && nameWithoutExtention?.split(".").length > 1) {
       nameWithoutExtention = nameWithoutExtention.split(".")[0];
     }
-    if (imageDownloadType === "image/png") {
-      return `bg_removed_${nameWithoutExtention}.png`;
-    }
-    return `bg_removed_${nameWithoutExtention}.webp`;
+
+    // Create timestamp: YYYY-MM-DD_HH-MM-SS
+    const now = new Date();
+    const timestamp = now.toISOString()
+      .replace(/T/, '_')
+      .replace(/\..+/, '')
+      .replace(/:/g, '-')
+      .split('.')[0];
+
+    // Determine model type (for filename)
+    const modelType = briaProcessing ? 'bria' : 'isnet';
+
+    // Determine extension
+    const extension = imageDownloadType === "image/png" ? "png" : "webp";
+
+    // Format: rembg_[name]_[timestamp]_[model].[ext]
+    return `rembg_${nameWithoutExtention}_${timestamp}_${modelType}.${extension}`;
   };
   return (
     <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-12 lg:py-16">
@@ -162,7 +247,14 @@ export default function HeroSection({
         </div>
 
         {/* Right Side - Upload Area / All Upload Controls */}
-        <div className="flex flex-col border-2 border-dashed border-gray-300 rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-8 bg-white min-h-[350px] sm:min-h-[400px]">
+        <div
+          className={`flex flex-col border-2 border-dashed rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-8 bg-white min-h-[350px] sm:min-h-[400px] transition-colors ${
+            isDragging ? 'border-purple-500 bg-purple-50' : 'border-gray-300'
+          }`}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+        >
           {/* Hidden File Input */}
           <Input
             id="dropzone-file"
@@ -176,16 +268,40 @@ export default function HeroSection({
           {!inputFile ? (
             <>
               {/* Upload Section - Top/Center */}
-              <div className="flex flex-col items-center justify-center flex-1">
+              <div className="flex flex-col items-center justify-center flex-1 space-y-4">
                 <Button
                   onClick={handleUploadClick}
                   size="lg"
-                  className="bg-purple-600 hover:bg-purple-700 text-white px-6 sm:px-8 lg:px-10 py-4 sm:py-5 lg:py-7 text-sm sm:text-base font-semibold h-auto rounded-full mb-2 sm:mb-3 shadow-lg hover:shadow-xl transition-all"
+                  className="bg-purple-600 hover:bg-purple-700 text-white px-6 sm:px-8 lg:px-10 py-4 sm:py-5 lg:py-7 text-sm sm:text-base font-semibold h-auto rounded-full shadow-lg hover:shadow-xl transition-all"
                 >
                   <Plus className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
                   Upload image
                 </Button>
-                <p className="text-xs sm:text-sm text-gray-600">or paste URL</p>
+
+                <p className="text-xs sm:text-sm text-gray-600">or drag & drop</p>
+
+                {/* URL Input */}
+                <div className="w-full max-w-md flex gap-2">
+                  <div className="relative flex-1">
+                    <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <Input
+                      type="url"
+                      placeholder="Paste image URL"
+                      value={urlInput}
+                      onChange={(e) => setUrlInput(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleUrlPaste()}
+                      className="pl-10 pr-4 py-2 text-sm"
+                    />
+                  </div>
+                  <Button
+                    onClick={handleUrlPaste}
+                    disabled={!urlInput.trim() || isLoadingUrl}
+                    size="sm"
+                    className="bg-purple-600 hover:bg-purple-700"
+                  >
+                    {isLoadingUrl ? "Loading..." : "Load"}
+                  </Button>
+                </div>
               </div>
 
               {/* Batch Mode - Bottom Center of Upload Area */}
@@ -260,7 +376,8 @@ export default function HeroSection({
                 </div>
               </div>
 
-              {/* Advanced Options */}
+              {/* Advanced Options - HIDDEN (Functionality preserved in state) */}
+              {/*
               <div className="flex-1 space-y-4 sm:space-y-6 mb-4 sm:mb-6">
                 <div className="flex items-center gap-2 sm:gap-3">
                   <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -276,7 +393,6 @@ export default function HeroSection({
                   </div>
                 </div>
 
-                {/* Model Selection */}
                 <div className="space-y-2">
                   <h4 className="text-xs sm:text-sm font-semibold text-gray-900">
                     Model Quality
@@ -298,7 +414,6 @@ export default function HeroSection({
                   </Select>
                 </div>
 
-                {/* Output Format */}
                 <div className="flex items-center justify-between">
                   <h4 className="text-xs sm:text-sm font-semibold text-gray-900">
                     WebP Format
@@ -315,7 +430,6 @@ export default function HeroSection({
                   />
                 </div>
 
-                {/* Quality Slider */}
                 <div className="space-y-2">
                   <div className="flex justify-between">
                     <h4 className="text-xs sm:text-sm font-semibold text-gray-900">
@@ -334,6 +448,7 @@ export default function HeroSection({
                   />
                 </div>
               </div>
+              */}
 
               {/* Error Message */}
               {errorMsg && (
@@ -431,28 +546,40 @@ export default function HeroSection({
         </p>
         <div className="flex items-center justify-center gap-2 sm:gap-3 lg:gap-4 flex-wrap px-4">
           {/* Sample thumbnails */}
-          <button className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg sm:rounded-xl overflow-hidden hover:scale-105 transition-transform shadow-md hover:shadow-lg">
+          <button
+            onClick={() => handleDemoImageClick("https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=800")}
+            className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg sm:rounded-xl overflow-hidden hover:scale-105 transition-transform shadow-md hover:shadow-lg"
+          >
             <img
               src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop"
               alt="Sample 1"
               className="w-full h-full object-cover"
             />
           </button>
-          <button className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg sm:rounded-xl overflow-hidden hover:scale-105 transition-transform shadow-md hover:shadow-lg">
+          <button
+            onClick={() => handleDemoImageClick("https://images.unsplash.com/photo-1543163521-1bf539c55dd2?w=800")}
+            className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg sm:rounded-xl overflow-hidden hover:scale-105 transition-transform shadow-md hover:shadow-lg"
+          >
             <img
               src="https://images.unsplash.com/photo-1543163521-1bf539c55dd2?w=200&h=200&fit=crop"
               alt="Sample 2"
               className="w-full h-full object-cover"
             />
           </button>
-          <button className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg sm:rounded-xl overflow-hidden hover:scale-105 transition-transform shadow-md hover:shadow-lg">
+          <button
+            onClick={() => handleDemoImageClick("https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800")}
+            className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg sm:rounded-xl overflow-hidden hover:scale-105 transition-transform shadow-md hover:shadow-lg"
+          >
             <img
               src="https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=200&h=200&fit=crop"
               alt="Sample 3"
               className="w-full h-full object-cover"
             />
           </button>
-          <button className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg sm:rounded-xl overflow-hidden hover:scale-105 transition-transform shadow-md hover:shadow-lg">
+          <button
+            onClick={() => handleDemoImageClick("https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800")}
+            className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg sm:rounded-xl overflow-hidden hover:scale-105 transition-transform shadow-md hover:shadow-lg"
+          >
             <img
               src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop"
               alt="Sample 4"
