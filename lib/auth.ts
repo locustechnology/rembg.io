@@ -98,6 +98,8 @@ export const auth = betterAuth({
     "http://localhost:3000",
     "http://localhost:3001",
     "https://rembg-test-mode.vercel.app",
+    "https://rembg.io",
+    "https://www.rembg.io",
   ],
 
   // Plugins
