@@ -6,13 +6,16 @@ import { authClient } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import Link from "next/link";
-import { CheckCircle, AlertCircle } from "lucide-react";
+import Image from "next/image";
+import { CheckCircle, AlertCircle, Eye, EyeOff } from "lucide-react";
 
 function ResetPasswordContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
@@ -87,12 +90,20 @@ function ResetPasswordContent() {
         <div className="max-w-md w-full bg-white rounded-2xl sm:rounded-3xl shadow-2xl p-6 sm:p-8">
           {/* Success Icon */}
           <div className="text-center mb-6 sm:mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 bg-green-100 rounded-full mb-4">
-              <CheckCircle className="w-10 h-10 sm:w-12 sm:h-12 text-green-600" />
+            <div className="flex items-center justify-center gap-3 mb-4">
+              <Link href="/" className="inline-block">
+                <Image
+                  src="/rembg_photo_2025-11-17_13-29-10_2025-11-17_07-59-47_isnet.png"
+                  alt="RemBG Logo"
+                  width={64}
+                  height={64}
+                  className="w-14 h-14 sm:w-16 sm:h-16 object-contain"
+                />
+              </Link>
+              <div className="inline-flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 bg-green-100 rounded-full">
+                <CheckCircle className="w-6 h-6 sm:w-7 sm:h-7 text-green-600" />
+              </div>
             </div>
-            <Link href="/" className="inline-block">
-              <h1 className="text-3xl sm:text-4xl font-bold text-primary mb-2">RemBG</h1>
-            </Link>
             <h2 className="text-xl sm:text-2xl font-bold text-gray-900">
               Password Reset Successful!
             </h2>
@@ -159,34 +170,60 @@ function ResetPasswordContent() {
             <label htmlFor="newPassword" className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
               New Password
             </label>
-            <Input
-              id="newPassword"
-              type="password"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              placeholder="Enter new password (min 8 characters)"
-              required
-              disabled={isLoading || !token}
-              className="h-11 sm:h-12 text-sm sm:text-base"
-              minLength={8}
-            />
+            <div className="relative">
+              <Input
+                id="newPassword"
+                type={showNewPassword ? "text" : "password"}
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Enter new password (min 8 characters)"
+                required
+                disabled={isLoading || !token}
+                className="h-11 sm:h-12 text-sm sm:text-base pr-10"
+                minLength={8}
+              />
+              <button
+                type="button"
+                onClick={() => setShowNewPassword(!showNewPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+              >
+                {showNewPassword ? (
+                  <EyeOff className="w-5 h-5" />
+                ) : (
+                  <Eye className="w-5 h-5" />
+                )}
+              </button>
+            </div>
           </div>
 
           <div>
             <label htmlFor="confirmPassword" className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
               Confirm New Password
             </label>
-            <Input
-              id="confirmPassword"
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder="Re-enter new password"
-              required
-              disabled={isLoading || !token}
-              className="h-11 sm:h-12 text-sm sm:text-base"
-              minLength={8}
-            />
+            <div className="relative">
+              <Input
+                id="confirmPassword"
+                type={showConfirmPassword ? "text" : "password"}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Re-enter new password"
+                required
+                disabled={isLoading || !token}
+                className="h-11 sm:h-12 text-sm sm:text-base pr-10"
+                minLength={8}
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+              >
+                {showConfirmPassword ? (
+                  <EyeOff className="w-5 h-5" />
+                ) : (
+                  <Eye className="w-5 h-5" />
+                )}
+              </button>
+            </div>
           </div>
 
           <Button

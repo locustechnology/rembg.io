@@ -14,6 +14,11 @@ export const metadata: Metadata = {
   metadataBase: new URL('https://rembg.io'),
   title: "Remove Background from Image for Free – RemBG.io",
   description: "Remove background from images instantly with AI. 100% automatic, free, and works offline in your browser. No uploads, no registration required. Perfect for product photos, portraits, and marketing materials.",
+  icons: {
+    icon: '/rembg_photo_2025-11-17_13-29-10_2025-11-17_07-59-47_isnet.png',
+    shortcut: '/rembg_photo_2025-11-17_13-29-10_2025-11-17_07-59-47_isnet.png',
+    apple: '/rembg_photo_2025-11-17_13-29-10_2025-11-17_07-59-47_isnet.png',
+  },
   keywords: [
     "remove background", 
     "remove bg", 
