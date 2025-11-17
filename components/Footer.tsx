@@ -49,13 +49,13 @@ export default function Footer() {
               <Link href="/" className="transition-colors duration-300 text-gray-700 hover:text-purple-600">
                 AI Background Remover
               </Link>
-              <Link href="#" className="transition-colors duration-300 text-gray-700 hover:text-purple-600">
+              <Link href="/contact" className="transition-colors duration-300 text-gray-700 hover:text-purple-600">
                 AI Image Upscaler
               </Link>
-              <Link href="#" className="transition-colors duration-300 text-gray-700 hover:text-purple-600">
+              <Link href="/contact" className="transition-colors duration-300 text-gray-700 hover:text-purple-600">
                 Batch Processing
               </Link>
-              <Link href="#" className="transition-colors duration-300 text-gray-700 hover:text-purple-600">
+              <Link href="/contact" className="transition-colors duration-300 text-gray-700 hover:text-purple-600">
                 API Access
               </Link>
             </div>
@@ -127,10 +127,10 @@ export default function Footer() {
               {/* <Link href="#" className="text-sm text-gray-600 transition-colors duration-300 hover:text-purple-600">F.A.Q</Link> */}
             </li>
             <li>
-              <Link href="#" className="text-sm text-gray-600 transition-colors duration-300 hover:text-purple-600">Privacy Policy</Link>
+              <Link href="https://www.gostudio.ai/privacy" className="text-sm text-gray-600 transition-colors duration-300 hover:text-purple-600">Privacy Policy</Link>
             </li>
             <li>
-              <Link href="#" className="text-sm text-gray-600 transition-colors duration-300 hover:text-purple-600">Terms &amp; Conditions</Link>
+              <Link href="https://www.gostudio.ai/terms" className="text-sm text-gray-600 transition-colors duration-300 hover:text-purple-600">Terms &amp; Conditions</Link>
             </li>
           </ul>
         </div>

@@ -6,7 +6,8 @@ import { authClient } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import Link from "next/link";
-import { Sparkles } from "lucide-react";
+import Image from "next/image";
+import { Sparkles, CheckCircle } from "lucide-react";
 
 export default function SignupPage() {
   const [email, setEmail] = useState("");
@@ -16,6 +17,7 @@ export default function SignupPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [otpSent, setOtpSent] = useState(false);
+  const [success, setSuccess] = useState(false);
   const [usePassword, setUsePassword] = useState(true); // Default to password signup
   const router = useRouter();
 
@@ -53,31 +55,32 @@ export default function SignupPage() {
       return;
     }
 
-    try {
-      setIsLoading(true);
-      setError("");
+    setIsLoading(true);
+    setError("");
 
-      await authClient.signUp.email({
-        email,
-        password,
-        name: email.split("@")[0], // Use email username as name
-        callbackURL: "/",
-      });
+    await authClient.signUp.email({
+      email,
+      password,
+      name: email.split("@")[0], // Use email username as name
+      callbackURL: "/",
+    }, {
+      onSuccess: () => {
+        // Force a full page reload to ensure session is loaded properly
+        window.location.href = "/";
+      },
+      onError: (ctx) => {
+        console.error("Password signup error:", ctx.error);
 
-      // Success - redirect to home
-      window.location.href = "/";
-    } catch (err: any) {
-      console.error("Password signup error:", err);
-
-      // Check if account exists with OAuth
-      if (err.message?.includes("already exists") || err.message?.includes("duplicate")) {
-        setError("An account with this email already exists. Try signing in with Google or use forgot password.");
-      } else {
-        setError(err.message || "Failed to create account");
-      }
-    } finally {
-      setIsLoading(false);
-    }
+        const errorMessage = ctx.error.message || "";
+        // Check if account exists with OAuth
+        if (errorMessage.toLowerCase().includes("already exists") || errorMessage.toLowerCase().includes("duplicate")) {
+          setError("An account with this email already exists. Try signing in with Google or use forgot password.");
+        } else {
+          setError(errorMessage || "Failed to create account");
+        }
+        setIsLoading(false);
+      },
+    });
   };
 
   const handleSendOTP = async (e: React.FormEvent) => {
@@ -88,34 +91,24 @@ export default function SignupPage() {
       return;
     }
 
-    try {
-      setIsLoading(true);
-      setError("");
+    setIsLoading(true);
+    setError("");
 
-      const response = await fetch("/api/auth/send-otp", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-      });
+    // Use Better Auth emailOTP plugin to send OTP
+    const { data, error } = await authClient.emailOtp.sendVerificationOtp({
+      email,
+      type: "sign-in", // Use "sign-in" type to allow auto-signup
+    });
 
-      const data = await response.json();
+    setIsLoading(false);
 
-      if (!response.ok) {
-        if (response.status === 409) {
-          // User already exists
-          setError(data.error);
-          return;
-        }
-        throw new Error(data.error || "Failed to send OTP");
-      }
-
-      setOtpSent(true);
-    } catch (err: any) {
-      console.error("Send OTP error:", err);
-      setError(err.message || "Failed to send OTP");
-    } finally {
-      setIsLoading(false);
+    if (error) {
+      console.error("Send OTP error:", error);
+      setError(error.message || "Failed to send OTP");
+      return;
     }
+
+    setOtpSent(true);
   };
 
   const handleVerifyOTP = async (e: React.FormEvent) => {
@@ -126,52 +119,97 @@ export default function SignupPage() {
       return;
     }
 
-    try {
-      setIsLoading(true);
-      setError("");
+    setIsLoading(true);
+    setError("");
 
-      const response = await fetch("/api/auth/verify-otp", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, otp }),
-      });
+    // Use Better Auth signIn.emailOtp to verify and sign in
+    await authClient.signIn.emailOtp({
+      email,
+      otp,
+    }, {
+      onSuccess: () => {
+        console.log("✅ OTP Verification successful! Session created.");
+        setIsLoading(false);
+        // Force a full page reload to ensure session is loaded properly
+        window.location.href = "/";
+      },
+      onError: (ctx) => {
+        console.error("Verify OTP error:", ctx.error);
+        const errorMessage = ctx.error.message || "";
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Invalid OTP");
-      }
-
-      // OTP verified and session created successfully
-      console.log("✅ OTP Verification successful!");
-      console.log("Response data:", data);
-      console.log("User:", data.user);
-      console.log("Session should be set now");
-
-      // Check if cookies were set
-      console.log("Cookies after verification:", document.cookie);
-
-      // Wait a moment for cookies to be processed
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      // Force a full page reload to pick up the new session
-      console.log("🔄 Redirecting to home page...");
-      window.location.href = "/";
-    } catch (err: any) {
-      console.error("Verify OTP error:", err);
-      setError(err.message || "Failed to verify OTP");
-    } finally {
-      setIsLoading(false);
-    }
+        if (errorMessage.toLowerCase().includes("invalid") || errorMessage.toLowerCase().includes("otp")) {
+          setError("Invalid verification code. Please try again.");
+        } else if (errorMessage.toLowerCase().includes("expired")) {
+          setError("Verification code has expired. Please request a new one.");
+        } else {
+          setError(errorMessage || "Failed to verify code");
+        }
+        setIsLoading(false);
+      },
+    });
   };
+
+  if (success) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50 flex items-center justify-center p-3 sm:p-4">
+        <div className="max-w-md w-full bg-white rounded-2xl sm:rounded-3xl shadow-2xl p-6 sm:p-8">
+          <div className="text-center">
+            <div className="inline-flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 bg-green-100 rounded-full mb-4">
+              <CheckCircle className="w-10 h-10 sm:w-12 sm:h-12 text-green-600" />
+            </div>
+            <Link href="/" className="inline-flex items-center gap-3 mb-2">
+              <Image
+                src="/rembg_photo_2025-11-17_13-29-10_2025-11-17_07-59-47_isnet.png"
+                alt="RemBG Logo"
+                width={48}
+                height={48}
+                className="w-10 h-10 sm:w-12 sm:h-12 object-contain"
+              />
+              <div className="flex flex-col">
+                <span className="text-lg sm:text-xl font-bold text-gray-900 leading-tight">
+                  RemBG
+                </span>
+                <span className="text-xs sm:text-sm text-gray-500 leading-tight">
+                  by GoStudio.ai
+                </span>
+              </div>
+            </Link>
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4">
+              Email Verified!
+            </h2>
+            <p className="text-sm sm:text-base text-gray-600 mb-6">
+              Please set up a password to complete your account setup.
+            </p>
+            <div className="animate-pulse text-primary font-semibold">
+              Redirecting to login...
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (otpSent) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50 flex items-center justify-center p-3 sm:p-4">
         <div className="max-w-md w-full bg-white rounded-2xl sm:rounded-3xl shadow-2xl p-6 sm:p-8">
           <div className="text-center mb-6 sm:mb-8">
-            <Link href="/" className="inline-block">
-              <h1 className="text-3xl sm:text-4xl font-bold text-primary mb-2">RemBG</h1>
+            <Link href="/" className="inline-flex items-center gap-3 mb-4">
+              <Image
+                src="/rembg_photo_2025-11-17_13-29-10_2025-11-17_07-59-47_isnet.png"
+                alt="RemBG Logo"
+                width={48}
+                height={48}
+                className="w-10 h-10 sm:w-12 sm:h-12 object-contain"
+              />
+              <div className="flex flex-col">
+                <span className="text-lg sm:text-xl font-bold text-gray-900 leading-tight">
+                  RemBG
+                </span>
+                <span className="text-xs sm:text-sm text-gray-500 leading-tight">
+                  by GoStudio.ai
+                </span>
+              </div>
             </Link>
             <h2 className="text-xl sm:text-2xl font-bold text-gray-900">
               Enter Verification Code
@@ -253,8 +291,22 @@ export default function SignupPage() {
       <div className="max-w-md w-full bg-white rounded-2xl sm:rounded-3xl shadow-2xl p-6 sm:p-8">
         {/* Header */}
         <div className="text-center mb-4 sm:mb-6">
-          <Link href="/" className="inline-block">
-            <h1 className="text-3xl sm:text-4xl font-bold text-primary mb-2">RemBG</h1>
+          <Link href="/" className="inline-flex items-center gap-3 mb-3">
+            <Image
+              src="/rembg_photo_2025-11-17_13-29-10_2025-11-17_07-59-47_isnet.png"
+              alt="RemBG Logo"
+              width={48}
+              height={48}
+              className="w-10 h-10 sm:w-12 sm:h-12 object-contain"
+            />
+            <div className="flex flex-col">
+              <span className="text-lg sm:text-xl font-bold text-gray-900 leading-tight">
+                RemBG
+              </span>
+              <span className="text-xs sm:text-sm text-gray-500 leading-tight">
+                by GoStudio.ai
+              </span>
+            </div>
           </Link>
           <p className="text-sm sm:text-base text-gray-600">Create your account and get started</p>
         </div>

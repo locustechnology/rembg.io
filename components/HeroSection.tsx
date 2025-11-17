@@ -81,16 +81,32 @@ export default function HeroSection({
   };
 
   // Drag & Drop Handlers
-  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+  const handleDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(true);
   };
 
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // Set dropEffect for better visual feedback
+    e.dataTransfer.dropEffect = 'copy';
+  };
+
   const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
-    setIsDragging(false);
+
+    // Only set isDragging to false if we're actually leaving the drop zone
+    // (not just entering a child element)
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX;
+    const y = e.clientY;
+
+    if (x <= rect.left || x >= rect.right || y <= rect.top || y >= rect.bottom) {
+      setIsDragging(false);
+    }
   };
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
@@ -103,6 +119,9 @@ export default function HeroSection({
       const file = files[0];
       if (file.type.startsWith("image/")) {
         setInputFile(file);
+      } else {
+        // Show error for non-image files
+        alert("Please drop an image file (PNG, JPG, WebP, etc.)");
       }
     }
   };
@@ -305,6 +324,7 @@ export default function HeroSection({
           className={`flex flex-col border-2 border-dashed rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-8 bg-white min-h-[350px] sm:min-h-[400px] transition-colors ${
             isDragging ? 'border-purple-500 bg-purple-50' : 'border-gray-300'
           }`}
+          onDragEnter={handleDragEnter}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}

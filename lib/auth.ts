@@ -1,4 +1,5 @@
 import { betterAuth } from "better-auth";
+import { emailOTP } from "better-auth/plugins";
 import { Pool } from "pg";
 
 // Create PostgreSQL connection pool
@@ -82,7 +83,7 @@ export const auth = betterAuth({
       }
     },
 
-    resetPasswordTokenExpiresIn: 3600, // 1 hour (in seconds)
+    resetPasswordTokenExpiresIn: 7200, // 2 hours (in seconds) - increased from 1 hour
   },
 
   socialProviders: {
@@ -91,6 +92,100 @@ export const auth = betterAuth({
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
     },
   },
+
+  // Trusted origins for CORS and cookies
+  trustedOrigins: [
+    "http://localhost:3000",
+    "http://localhost:3001",
+    "https://rembg-test-mode.vercel.app",
+  ],
+
+  // Plugins
+  plugins: [
+    emailOTP({
+      async sendVerificationOTP({ email, otp, type }) {
+        const { Resend } = await import("resend");
+        const resend = new Resend(process.env.RESEND_API_KEY);
+
+        let subject = "";
+        let heading = "";
+        let message = "";
+
+        if (type === "sign-in") {
+          subject = "Sign in to RemBG";
+          heading = "Sign In to Your Account";
+          message = "Use this code to sign in to your RemBG account:";
+        } else if (type === "email-verification") {
+          subject = "Verify your RemBG email";
+          heading = "Verify Your Email";
+          message = "Use this code to verify your email address:";
+        } else {
+          subject = "Reset your RemBG password";
+          heading = "Reset Your Password";
+          message = "Use this code to reset your password:";
+        }
+
+        try {
+          await resend.emails.send({
+            from: process.env.FROM_EMAIL!,
+            to: [email],
+            subject,
+            reply_to: process.env.REPLY_TO_EMAIL,
+            html: `
+              <!DOCTYPE html>
+              <html>
+                <head>
+                  <style>
+                    body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background-color: #f9fafb; margin: 0; padding: 0; }
+                    .container { max-width: 600px; margin: 40px auto; background-color: white; border-radius: 16px; padding: 40px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05); }
+                    .logo { text-align: center; margin-bottom: 32px; }
+                    .logo h1 { color: #6366f1; font-size: 32px; margin: 0; font-weight: 700; }
+                    .content { color: #374151; font-size: 16px; line-height: 1.6; }
+                    .otp-box { background-color: #f3f4f6; border: 2px dashed #6366f1; border-radius: 12px; padding: 24px; text-align: center; margin: 24px 0; }
+                    .otp-code { font-size: 36px; font-weight: 700; letter-spacing: 8px; color: #6366f1; margin: 0; }
+                    .footer { margin-top: 32px; padding-top: 24px; border-top: 1px solid #e5e7eb; color: #6b7280; font-size: 14px; text-align: center; }
+                    .warning { background-color: #fef3c7; border: 1px solid #fbbf24; color: #92400e; padding: 12px 20px; border-radius: 8px; margin: 16px 0; font-size: 14px; text-align: center; }
+                  </style>
+                </head>
+                <body>
+                  <div class="container">
+                    <div class="logo">
+                      <h1>RemBG</h1>
+                    </div>
+                    <div class="content">
+                      <h2 style="color: #111827; margin-top: 0;">${heading}</h2>
+                      <p>${message}</p>
+                      <div class="otp-box">
+                        <p class="otp-code">${otp}</p>
+                      </div>
+                      <div class="warning">
+                        ⏱️ This code will expire in 10 minutes
+                      </div>
+                      <p style="font-size: 14px; color: #6b7280; margin-top: 24px;">
+                        If you didn't request this code, you can safely ignore this email.
+                      </p>
+                    </div>
+                    <div class="footer">
+                      <p>&copy; 2025 RemBG. All rights reserved.</p>
+                    </div>
+                  </div>
+                </body>
+              </html>
+            `,
+          });
+
+          console.log(`OTP email sent to ${email} (type: ${type})`);
+        } catch (error) {
+          console.error(`Failed to send OTP email to ${email}:`, error);
+          throw error;
+        }
+      },
+      otpLength: 6,
+      expiresIn: 600, // 10 minutes
+      sendVerificationOnSignUp: false,
+      disableSignUp: false, // Allow auto-signup on OTP sign-in
+    }),
+  ],
 
   // Email OTP (Magic Link) - Enabled with new Resend credentials
   emailVerification: {
@@ -184,6 +279,7 @@ export const auth = betterAuth({
       // Generate custom IDs (using nanoid for shorter IDs)
       return crypto.randomUUID();
     },
+    useSecureCookies: process.env.NODE_ENV === "production", // Only use secure cookies in production
     defaultCookieAttributes: {
       sameSite: "lax",
       path: "/",

@@ -21,22 +21,23 @@ export default function ForgotPasswordPage() {
       return;
     }
 
-    try {
-      setIsLoading(true);
-      setError("");
+    setIsLoading(true);
+    setError("");
 
-      await authClient.forgetPassword({
-        email,
-        redirectTo: "/reset-password",
-      });
-
-      setSuccess(true);
-    } catch (err: any) {
-      console.error("Forgot password error:", err);
-      setError(err.message || "Failed to send reset email. Please try again.");
-    } finally {
-      setIsLoading(false);
-    }
+    await authClient.forgetPassword({
+      email,
+      redirectTo: "/reset-password",
+    }, {
+      onSuccess: () => {
+        setSuccess(true);
+        setIsLoading(false);
+      },
+      onError: (ctx) => {
+        console.error("Forgot password error:", ctx.error);
+        setError(ctx.error.message || "Failed to send reset email. Please try again.");
+        setIsLoading(false);
+      },
+    });
   };
 
   if (success) {

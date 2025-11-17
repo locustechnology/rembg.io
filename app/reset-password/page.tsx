@@ -51,31 +51,34 @@ export default function ResetPasswordPage() {
       return;
     }
 
-    try {
-      setIsLoading(true);
-      setError("");
+    setIsLoading(true);
+    setError("");
 
-      await authClient.resetPassword({
-        newPassword,
-      });
+    await authClient.resetPassword({
+      newPassword,
+      token, // Include the token from URL
+    }, {
+      onSuccess: () => {
+        setSuccess(true);
+        setIsLoading(false);
 
-      setSuccess(true);
+        // Redirect to login after 3 seconds
+        setTimeout(() => {
+          router.push("/login");
+        }, 3000);
+      },
+      onError: (ctx) => {
+        console.error("Reset password error:", ctx.error);
 
-      // Redirect to login after 3 seconds
-      setTimeout(() => {
-        router.push("/login");
-      }, 3000);
-    } catch (err: any) {
-      console.error("Reset password error:", err);
-
-      if (err.message?.includes("expired") || err.message?.includes("invalid")) {
-        setError("This reset link has expired or is invalid. Please request a new password reset.");
-      } else {
-        setError(err.message || "Failed to reset password. Please try again.");
-      }
-    } finally {
-      setIsLoading(false);
-    }
+        const errorMessage = ctx.error.message || "";
+        if (errorMessage.toLowerCase().includes("expired") || errorMessage.toLowerCase().includes("invalid") || errorMessage.toLowerCase().includes("token")) {
+          setError("This reset link has expired or is invalid. Please request a new password reset.");
+        } else {
+          setError(errorMessage || "Failed to reset password. Please try again.");
+        }
+        setIsLoading(false);
+      },
+    });
   };
 
   if (success) {
