@@ -12,16 +12,29 @@ export default function Navbar() {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  const { data: session } = useSession();
+  const { data: session, isPending, error } = useSession();
   const { credits, fetchCredits, setUser, setSession, reset } = useAuthStore();
+
+  // Debug logging for session state
+  useEffect(() => {
+    console.log("=== NAVBAR SESSION DEBUG ===");
+    console.log("Session data:", session);
+    console.log("Is pending:", isPending);
+    console.log("Error:", error);
+    console.log("Has debug cookie:", document.cookie.includes("debug_has_session"));
+    console.log("All cookies:", document.cookie);
+    console.log("===========================");
+  }, [session, isPending, error]);
 
   // Fetch credits when user logs in
   useEffect(() => {
     if (session?.user) {
+      console.log("✅ User session found:", session.user.email);
       setUser(session.user);
       setSession(session);
       fetchCredits();
     } else {
+      console.log("❌ No user session");
       reset();
     }
   }, [session]);
@@ -120,13 +133,13 @@ export default function Navbar() {
                     </div>
 
                     {/* Menu Items */}
-                    <Link
+                    {/* <Link
                       href="/dashboard"
                       className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                     >
                       <User className="w-4 h-4" />
                       Dashboard
-                    </Link>
+                    </Link> */}
 
                     <button
                       onClick={handleLogout}

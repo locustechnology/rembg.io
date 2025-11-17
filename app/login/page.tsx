@@ -9,10 +9,12 @@ import Link from "next/link";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [otp, setOtp] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [otpSent, setOtpSent] = useState(false);
+  const [usePassword, setUsePassword] = useState(true); // Default to password login
   const router = useRouter();
 
   const handleGoogleLogin = async () => {
@@ -26,6 +28,42 @@ export default function LoginPage() {
     } catch (err: any) {
       console.error("Google login error:", err);
       setError(err.message || "Failed to login with Google");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handlePasswordLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!email || !password) {
+      setError("Please enter your email and password");
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      setError("");
+
+      await authClient.signIn.email({
+        email,
+        password,
+        callbackURL: "/",
+      });
+
+      // Success - redirect to home
+      window.location.href = "/";
+    } catch (err: any) {
+      console.error("Password login error:", err);
+
+      // Provide helpful error messages
+      if (err.message?.includes("Invalid")) {
+        setError("Invalid email or password. Please try again.");
+      } else if (err.message?.includes("not found")) {
+        setError("No account found with this email. Try signing up or use Google login.");
+      } else {
+        setError(err.message || "Failed to sign in");
+      }
     } finally {
       setIsLoading(false);
     }
@@ -240,32 +278,109 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* Email Login Form */}
-        <form onSubmit={handleSendOTP} className="space-y-3 sm:space-y-4">
-          <div>
-            <label htmlFor="email" className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
-              Email address
-            </label>
-            <Input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
-              required
-              disabled={isLoading}
-              className="h-11 sm:h-12 text-sm sm:text-base"
-            />
-          </div>
-
-          <Button
-            type="submit"
-            disabled={isLoading}
-            className="w-full h-11 sm:h-12 text-sm sm:text-base font-semibold"
+        {/* Method Toggle */}
+        <div className="flex gap-2 mb-4">
+          <button
+            type="button"
+            onClick={() => setUsePassword(true)}
+            className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors ${
+              usePassword
+                ? "bg-purple-600 text-white"
+                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+            }`}
           >
-            {isLoading ? "Sending code..." : "Send Verification Code"}
-          </Button>
-        </form>
+            Password
+          </button>
+          <button
+            type="button"
+            onClick={() => setUsePassword(false)}
+            className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors ${
+              !usePassword
+                ? "bg-purple-600 text-white"
+                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+            }`}
+          >
+            Email Code
+          </button>
+        </div>
+
+        {/* Email Login Form */}
+        {usePassword ? (
+          <form onSubmit={handlePasswordLogin} className="space-y-3 sm:space-y-4">
+            <div>
+              <label htmlFor="email" className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
+                Email address
+              </label>
+              <Input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@example.com"
+                required
+                disabled={isLoading}
+                className="h-11 sm:h-12 text-sm sm:text-base"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="password" className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
+                Password
+              </label>
+              <Input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter your password"
+                required
+                disabled={isLoading}
+                className="h-11 sm:h-12 text-sm sm:text-base"
+                minLength={8}
+              />
+            </div>
+
+            <div className="text-right">
+              <Link href="/forgot-password" className="text-xs sm:text-sm text-primary font-semibold hover:underline">
+                Forgot password?
+              </Link>
+            </div>
+
+            <Button
+              type="submit"
+              disabled={isLoading}
+              className="w-full h-11 sm:h-12 text-sm sm:text-base font-semibold"
+            >
+              {isLoading ? "Signing in..." : "Sign In"}
+            </Button>
+          </form>
+        ) : (
+          <form onSubmit={handleSendOTP} className="space-y-3 sm:space-y-4">
+            <div>
+              <label htmlFor="email-otp" className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
+                Email address
+              </label>
+              <Input
+                id="email-otp"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@example.com"
+                required
+                disabled={isLoading}
+                className="h-11 sm:h-12 text-sm sm:text-base"
+              />
+            </div>
+
+            <Button
+              type="submit"
+              disabled={isLoading}
+              className="w-full h-11 sm:h-12 text-sm sm:text-base font-semibold"
+            >
+              {isLoading ? "Sending code..." : "Send Verification Code"}
+            </Button>
+          </form>
+        )}
 
         {/* Footer */}
         <div className="mt-4 sm:mt-6 text-center text-xs sm:text-sm text-gray-600">

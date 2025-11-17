@@ -37,7 +37,7 @@ export default function Footer() {
                 Transform your images instantly for e-commerce, marketing, social media, and more.
               </p>
               <p className="mt-4 text-sm text-gray-800">
-                Be a part of thousands of users using our platform to achieve professional results without design skills.
+                {/* Be a part of thousands of users using our platform to achieve professional results without design skills. */}
               </p>
             </div>
           </div>
@@ -120,11 +120,11 @@ export default function Footer() {
         {/* Bottom Section */}
         <div className="flex flex-col-reverse justify-between pt-5 pb-10 border-t lg:flex-row">
           <p className="text-sm text-gray-600">
-            © Copyright {currentYear} RemBG Technologies. All rights reserved.
+            © Copyright {currentYear} GoStudio. All rights reserved.
           </p>
           <ul className="flex flex-col mb-3 space-y-2 lg:mb-0 sm:space-y-0 sm:space-x-5 sm:flex-row">
             <li>
-              <Link href="#" className="text-sm text-gray-600 transition-colors duration-300 hover:text-purple-600">F.A.Q</Link>
+              {/* <Link href="#" className="text-sm text-gray-600 transition-colors duration-300 hover:text-purple-600">F.A.Q</Link> */}
             </li>
             <li>
               <Link href="#" className="text-sm text-gray-600 transition-colors duration-300 hover:text-purple-600">Privacy Policy</Link>

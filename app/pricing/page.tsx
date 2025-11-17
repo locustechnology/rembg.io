@@ -253,8 +253,8 @@ export default function PricingPage() {
                   key={plan.id}
                   className="relative bg-white rounded-3xl border-2 border-gray-200 overflow-hidden hover:shadow-xl transition-all duration-300"
                 >
-                  {/* Best Value Badge for yearly plans */}
-                  {plan.name.includes('Yearly') && (
+                  {/* Best Value Badge for Starter plan only */}
+                  {plan.name.includes('Starter') && plan.name.includes('Yearly') && (
                     <div className="absolute top-0 right-0 w-40 h-40 overflow-hidden">
                       <div className="absolute top-7 -right-10 w-56 bg-purple-600 text-white text-center py-1.5 text-xs font-bold transform rotate-45 shadow-md">
                         BEST VALUE

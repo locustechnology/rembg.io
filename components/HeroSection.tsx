@@ -69,6 +69,7 @@ export default function HeroSection({
   const [isDragging, setIsDragging] = useState(false);
   const [urlInput, setUrlInput] = useState("");
   const [isLoadingUrl, setIsLoadingUrl] = useState(false);
+  const [downloadFormat, setDownloadFormat] = useState<'png' | 'webp' | 'jpg'>('png');
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0] || null;
@@ -164,11 +165,64 @@ export default function HeroSection({
     // Determine model type (for filename)
     const modelType = briaProcessing ? 'bria' : 'isnet';
 
-    // Determine extension
-    const extension = imageDownloadType === "image/png" ? "png" : "webp";
+    // Use selected download format
+    const extension = downloadFormat;
 
     // Format: rembg_[name]_[timestamp]_[model].[ext]
     return `rembg_${nameWithoutExtention}_${timestamp}_${modelType}.${extension}`;
+  };
+
+  // Convert and download image in selected format
+  const handleDownload = async () => {
+    if (!outputFileURL) return;
+
+    try {
+      // Fetch the output image
+      const response = await fetch(outputFileURL);
+      const blob = await response.blob();
+
+      // Create an image element to load the blob
+      const img = new Image();
+      const imgUrl = URL.createObjectURL(blob);
+
+      img.onload = () => {
+        // Create a canvas to convert the image
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+
+        if (!ctx) return;
+
+        // Draw the image on canvas
+        ctx.drawImage(img, 0, 0);
+
+        // Convert to selected format
+        const mimeType = downloadFormat === 'jpg' ? 'image/jpeg' : `image/${downloadFormat}`;
+        const quality = downloadFormat === 'jpg' ? 0.95 : 0.92; // High quality
+
+        canvas.toBlob((convertedBlob) => {
+          if (!convertedBlob) return;
+
+          // Create download link
+          const url = URL.createObjectURL(convertedBlob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = fileName();
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+
+          // Cleanup
+          URL.revokeObjectURL(url);
+          URL.revokeObjectURL(imgUrl);
+        }, mimeType, quality);
+      };
+
+      img.src = imgUrl;
+    } catch (error) {
+      console.error('Download error:', error);
+    }
   };
   return (
     <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-12 lg:py-16">
@@ -307,8 +361,8 @@ export default function HeroSection({
               {/* Batch Mode - Bottom Center of Upload Area */}
               <div className="flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 text-[10px] sm:text-xs text-gray-700 pt-4 sm:pt-6 border-t border-gray-200">
                 <div className="flex items-center gap-1 sm:gap-2">
-                  <Crown className="w-3 h-3 sm:w-4 sm:h-4 text-yellow-500" />
-                  <span className="font-semibold">Batch mode</span>
+                  {/* <Crown className="w-3 h-3 sm:w-4 sm:h-4 text-yellow-500" />
+                  <span className="font-semibold"></span> */}
                 </div>
                 <span className="text-gray-600 text-center">
                   Remove image backgrounds instantly in 3 easy steps
@@ -516,7 +570,7 @@ export default function HeroSection({
                       </span>
                     ) : (
                       <>
-                        <span>Bria RMBG 2.0</span>
+                        <span>Superior Model</span>
                         <span className="text-xs opacity-90">
                           {session?.user ? `${creditCostBria} credits` : 'Login required'}
                         </span>
@@ -525,14 +579,53 @@ export default function HeroSection({
                   </Button>
                 </div>
               ) : (
-                <a
-                  href={outputFileURL}
-                  download={fileName()}
-                  className="w-full h-10 sm:h-12 bg-purple-600 hover:bg-purple-700 text-white font-semibold flex justify-center items-center rounded-lg sm:rounded-xl shadow-lg hover:shadow-xl transition-all text-sm sm:text-base"
-                >
-                  <Download size={16} className="sm:w-[18px] sm:h-[18px] mr-2" />
-                  Download Image
-                </a>
+                <div className="space-y-3">
+                  {/* Format Selector */}
+                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
+                    <span className="text-sm font-medium text-gray-700">Download Format:</span>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setDownloadFormat('png')}
+                        className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
+                          downloadFormat === 'png'
+                            ? 'bg-purple-600 text-white shadow-sm'
+                            : 'bg-white text-gray-700 border border-gray-300 hover:border-purple-300'
+                        }`}
+                      >
+                        PNG
+                      </button>
+                      <button
+                        onClick={() => setDownloadFormat('webp')}
+                        className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
+                          downloadFormat === 'webp'
+                            ? 'bg-purple-600 text-white shadow-sm'
+                            : 'bg-white text-gray-700 border border-gray-300 hover:border-purple-300'
+                        }`}
+                      >
+                        WebP
+                      </button>
+                      <button
+                        onClick={() => setDownloadFormat('jpg')}
+                        className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
+                          downloadFormat === 'jpg'
+                            ? 'bg-purple-600 text-white shadow-sm'
+                            : 'bg-white text-gray-700 border border-gray-300 hover:border-purple-300'
+                        }`}
+                      >
+                        JPG
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Download Button */}
+                  <Button
+                    onClick={handleDownload}
+                    className="w-full h-10 sm:h-12 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-lg sm:rounded-xl shadow-lg hover:shadow-xl transition-all text-sm sm:text-base"
+                  >
+                    <Download size={16} className="sm:w-[18px] sm:h-[18px] mr-2" />
+                    Download as {downloadFormat.toUpperCase()}
+                  </Button>
+                </div>
               )}
             </>
           )}
