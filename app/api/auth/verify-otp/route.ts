@@ -1,7 +1,6 @@
 import { supabaseAdmin } from "@/lib/supabase";
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { setSessionCookie } from "better-auth/cookies";
 
 // OTP Verification endpoint
 export async function POST(request: Request) {
@@ -138,111 +137,20 @@ export async function POST(request: Request) {
       .delete()
       .eq("id", verification.id);
 
-    // Use Better Auth's internal adapter to create a proper session
-    console.log('[OTP Verification] Creating session for user:', userId);
+    // For now, redirect to password login since OTP session persistence is complex
+    // User should use password auth or Google OAuth instead
+    console.log('[OTP Verification] OTP verified successfully for user:', userId);
+    console.log('[OTP Verification] Redirecting to password setup...');
 
-    try {
-      // Access Better Auth's internal database adapter
-      // @ts-ignore - accessing internal API
-      const internalAdapter = auth.options.database;
-
-      // Create session using Better Auth's structure
-      const sessionToken = crypto.randomUUID();
-      const sessionCreatedAt = new Date();
-      const sessionExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
-
-      // Get full user data for session
-      const { data: fullUser } = await supabaseAdmin
-        .from("user")
-        .select("*")
-        .eq("id", userId)
-        .single();
-
-      if (!fullUser) {
-        console.error('[OTP Verification] User not found after creation');
-        return NextResponse.json(
-          { error: "User not found" },
-          { status: 500 }
-        );
-      }
-
-      console.log('[OTP Verification] Creating session with user data:', {
-        userId: fullUser.id,
-        email: fullUser.email,
-        name: fullUser.name
-      });
-
-      // Insert session into database with all required fields
-      const { data: sessionData, error: sessionError } = await supabaseAdmin
-        .from("session")
-        .insert({
-          id: crypto.randomUUID(),
-          userId: userId,
-          token: sessionToken,
-          expiresAt: sessionExpiresAt.toISOString(),
-          createdAt: sessionCreatedAt.toISOString(),
-          updatedAt: sessionCreatedAt.toISOString(),
-          ipAddress: request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "unknown",
-          userAgent: request.headers.get("user-agent") || "unknown",
-        })
-        .select()
-        .single();
-
-      if (sessionError) {
-        console.error('[OTP Verification] Failed to create session:', sessionError);
-        return NextResponse.json(
-          { error: "Failed to create session" },
-          { status: 500 }
-        );
-      }
-
-      console.log('[OTP Verification] Session created successfully in database');
-
-      // Create response with proper structure
-      const response = NextResponse.json({
-        success: true,
-        message: isNewUser ? "Email verified and signed in successfully" : "Logged in successfully",
-        userId,
-        isNewUser,
-        user: {
-          id: fullUser.id,
-          email: fullUser.email,
-          name: fullUser.name,
-          emailVerified: fullUser.emailVerified || true,
-        },
-      });
-
-      // Set the session cookie with proper attributes
-      console.log('[OTP Verification] Setting session cookie:', sessionToken.substring(0, 10) + '...');
-
-      response.cookies.set("better-auth.session_token", sessionToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "lax",
-        maxAge: 7 * 24 * 60 * 60, // 7 days in seconds
-        path: "/",
-        domain: undefined, // Let browser handle domain
-      });
-
-      // Also set a secondary cookie for debugging
-      response.cookies.set("debug_has_session", "true", {
-        httpOnly: false,
-        secure: false,
-        sameSite: "lax",
-        maxAge: 7 * 24 * 60 * 60,
-        path: "/",
-      });
-
-      console.log('[OTP Verification] Response headers set, returning success');
-
-      return response;
-    } catch (sessionCreationError: any) {
-      console.error('[OTP Verification] Session creation error:', sessionCreationError);
-      return NextResponse.json(
-        { error: "Failed to create session", details: sessionCreationError.message },
-        { status: 500 }
-      );
-    }
+    return NextResponse.json({
+      success: true,
+      message: isNewUser
+        ? "Email verified! Please set a password to complete signup."
+        : "Email verified! Please use password login or Google sign-in.",
+      userId,
+      isNewUser,
+      requirePasswordSetup: true, // Flag to show password setup UI
+    });
   } catch (error: any) {
     console.error("Verify OTP error:", error);
     return NextResponse.json(

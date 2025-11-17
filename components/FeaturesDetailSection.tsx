@@ -11,11 +11,7 @@ import {
   Eye,
   CheckCircle2,
   TrendingUp,
-  Target,
-  ShoppingBag,
-  Globe,
-  Camera,
-  Share2
+  Target
 } from "lucide-react";
 
 export default function FeaturesDetailSection() {
@@ -91,29 +87,29 @@ export default function FeaturesDetailSection() {
 
   const useCases = [
     {
-      icon: <ShoppingBag className="w-8 h-8" />,
       title: "E-commerce",
       description: "Utilize AI to remove cluttered backgrounds, displaying your products on white, transparent, or custom backdrops that align with your brand.",
+      bgImage: "https://images.pexels.com/photos/27035625/pexels-photo-27035625.jpeg",
     },
     {
-      icon: <Target className="w-8 h-8" />,
       title: "Marketing",
       description: "Background removal helps direct focus to your key message. It is ensuring better click-throughs and engagement.",
+      bgImage: "https://images.pexels.com/photos/9739236/pexels-photo-9739236.jpeg",
     },
     {
-      icon: <Globe className="w-8 h-8" />,
       title: "Website",
       description: "Maintain visual consistency on your blog or website by using images with clean, branded backgrounds.",
+      bgImage: "https://images.pexels.com/photos/577585/pexels-photo-577585.jpeg",
     },
     {
-      icon: <Camera className="w-8 h-8" />,
       title: "Photographer-ready",
       description: "Remove backgrounds from shoots in bulk and deliver polished photos faster, perfect for weddings, events, and product catalogs.",
+      bgImage: "https://images.pexels.com/photos/34756574/pexels-photo-34756574.jpeg",
     },
     {
-      icon: <Share2 className="w-8 h-8" />,
       title: "Social media",
       description: "Use AI to enhance your selfies, headshots, and profile pics by removing distracting backgrounds and adding custom, clean replacements to reflect your identity.",
+      bgImage: "https://images.pexels.com/photos/2818118/pexels-photo-2818118.jpeg",
     },
   ];
 
@@ -226,7 +222,7 @@ export default function FeaturesDetailSection() {
 
         {/* Real-world Use Cases */}
         <div>
-          <div className="text-center mb-12">
+          <div className="text-center mb-16">
             <h3 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
               Real-world use cases of the AI image background removers
             </h3>
@@ -236,21 +232,30 @@ export default function FeaturesDetailSection() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="flex flex-wrap justify-center gap-8">
             {useCases.map((useCase, index) => (
               <div
                 key={index}
-                className="bg-white rounded-2xl p-8 shadow-md hover:shadow-2xl transition-all duration-300 border border-gray-100 hover:border-purple-300 group"
+                className="relative grid h-[28rem] w-full md:w-[calc(50%-1rem)] lg:w-[calc(33.333%-1.5rem)] flex-col items-end justify-center overflow-hidden rounded-3xl bg-white shadow-xl hover:shadow-2xl transition-all duration-500 group hover:-translate-y-2"
               >
-                <div className="w-16 h-16 bg-gradient-to-br from-purple-600 to-blue-600 rounded-2xl flex items-center justify-center text-white mb-6 group-hover:scale-110 transition-transform duration-300 shadow-lg">
-                  {useCase.icon}
+                {/* Background Image */}
+                <div
+                  className="absolute inset-0 h-full w-full overflow-hidden bg-cover bg-center transition-transform duration-500 group-hover:scale-110"
+                  style={{ backgroundImage: `url('${useCase.bgImage}')` }}
+                >
+                  {/* Gradient Overlay */}
+                  <div className="absolute inset-0 h-full w-full bg-gradient-to-t from-black/90 via-black/60 to-black/30"></div>
                 </div>
-                <h4 className="text-xl font-bold text-gray-900 mb-3">
-                  {useCase.title}
-                </h4>
-                <p className="text-gray-600 leading-relaxed">
-                  {useCase.description}
-                </p>
+
+                {/* Content */}
+                <div className="relative text-center p-8 md:p-10">
+                  <h4 className="text-3xl font-bold text-white mb-4 transition-all duration-300 group-hover:scale-105">
+                    {useCase.title}
+                  </h4>
+                  <p className="text-lg text-gray-200 leading-relaxed">
+                    {useCase.description}
+                  </p>
+                </div>
               </div>
             ))}
           </div>

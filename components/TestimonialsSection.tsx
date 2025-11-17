@@ -1,131 +1,200 @@
 "use client";
 
-import { Star } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 interface Testimonial {
   name: string;
   review: string;
-  rating: number;
+  title: string;
+  role: string;
+  avatar: string;
+  colSpan: string;
 }
 
 export default function TestimonialsSection() {
+  const [isVisible, setIsVisible] = useState(false);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const sectionRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    if (sectionRef.current) {
+      observer.observe(sectionRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, []);
+
+  const handlePrevious = () => {
+    setCurrentIndex((prev) => (prev === 0 ? testimonials.length - 1 : prev - 1));
+  };
+
+  const handleNext = () => {
+    setCurrentIndex((prev) => (prev === testimonials.length - 1 ? 0 : prev + 1));
+  };
+
   const testimonials: Testimonial[] = [
     {
       name: "Darpan Pathak",
-      review: "I've tried many background removal tools, but this one stands out. The AI is incredibly accurate, and the results are professional-grade. It's become an essential tool for my e-commerce business.",
-      rating: 5,
+      title: "Efficient background removal",
+      review: "RemBG changed everything for us. It automated the background editing, making every photo consistent. This has considerably streamlined our process, giving us the freedom to innovate.",
+      role: "Founder at GoodBuy Gear",
+      avatar: "https://images.pexels.com/photos/771742/pexels-photo-771742.jpeg",
+      colSpan: "col-span-1 lg:col-span-2",
     },
     {
       name: "Pritam Ghosh",
-      review: "The speed and quality are unmatched! I can process hundreds of images in minutes without compromising on quality. The credit system is fair and transparent.",
-      rating: 5,
+      title: "Outstanding AI precision",
+      review: "The time RemBG saves me is HUGE. What took forever in Photoshop now takes seconds. It's phenomenal! The AI precision is incredible for our jewelry product photos.",
+      role: "Founder at East Designs",
+      avatar: "https://images.pexels.com/photos/1040881/pexels-photo-1040881.jpeg",
+      colSpan: "col-span-1 lg:col-span-3",
     },
     {
       name: "Tejas Dhawade",
-      review: "As a photographer, I need precision. This tool delivers exactly that. The edge detection is phenomenal, and it handles complex backgrounds with ease. Highly recommended!",
-      rating: 5,
+      title: "Professional-grade results",
+      review: "I'm really skeptical when it comes to AI photo editing, but RemBG's AI always looks great and realistic. It's become essential for our product marketing and photography workflow.",
+      role: "Professional Photographer",
+      avatar: "https://images.pexels.com/photos/2076596/pexels-photo-2076596.jpeg",
+      colSpan: "col-span-1 lg:col-span-3",
     },
     {
-      name: "Farooq Adam",
-      review: "Simple, fast, and effective. The user interface is intuitive, and the results are instant. Perfect for anyone who needs quick background removal without the hassle.",
-      rating: 5,
+      name: "Sarah Mitchell",
+      title: "Reliable and fast",
+      review: "RemBG consistently delivers high-quality results without any disruptions. The speed and reliability have made it an indispensable tool for our e-commerce operations.",
+      role: "E-commerce Manager at StyleHub",
+      avatar: "https://images.pexels.com/photos/1081685/pexels-photo-1081685.jpeg",
+      colSpan: "col-span-1 lg:col-span-2",
     },
   ];
 
   return (
-    <section className="w-full bg-white py-20">
-      <div className="max-w-7xl mx-auto px-6">
+    <section
+      ref={sectionRef}
+      className="w-full bg-gradient-to-br from-purple-50/50 via-white to-blue-50/50 py-16 md:py-24"
+    >
+      <div className="max-w-6xl mx-auto px-6 md:px-10">
         {/* Section Title */}
-        <div className="text-center mb-16">
-          <h2 className="text-4xl md:text-5xl font-bold text-gray-900">
-            What people say about us
+        <div
+          className={`flex items-center justify-center flex-col gap-y-2 py-5 mb-10 transition-all duration-700 ${
+            isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+          }`}
+        >
+          <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold max-w-md mx-auto text-center text-gray-900">
+            Here's what our{" "}
+            <span className="bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">customers</span> have to say
           </h2>
+          <p className="text-lg font-medium text-gray-600">
+            Discover how our service can benefit you
+          </p>
         </div>
 
-        {/* Two Column Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
-          {/* Left Side - Stats */}
-          <div className="flex flex-col items-center lg:items-start space-y-8">
-            {/* User Count Badge */}
-            <div className="relative">
-              <div className="flex items-center justify-center w-full">
-                {/* Avatar Stack */}
-                <div className="flex -space-x-4">
-                  <div className="w-14 h-14 rounded-full bg-gradient-to-br from-purple-400 to-purple-600 border-4 border-white flex items-center justify-center text-white font-bold shadow-lg">
-                    A
+        {/* Mobile: Manual Slider */}
+        <div className="lg:hidden flex flex-col items-center gap-6 mb-8">
+          {/* Single Card Display */}
+          <div className="relative w-full max-w-[300px] overflow-hidden">
+            <div
+              className="flex transition-transform duration-500 ease-in-out"
+              style={{ transform: `translateX(-${currentIndex * 100}%)` }}
+            >
+              {testimonials.map((testimonial, index) => (
+                <div
+                  key={index}
+                  className="flex-shrink-0 w-[300px] h-[300px] border-2 p-6 rounded-2xl bg-white/80 backdrop-blur-sm shadow-lg border-purple-200/50 flex flex-col justify-between"
+                >
+                  {/* Review Content */}
+                  <div className="flex flex-col gap-y-3">
+                    <p className="font-bold text-lg text-gray-900">
+                      {testimonial.title}
+                    </p>
+                    <p className="font-medium text-gray-700 leading-relaxed text-sm line-clamp-4">
+                      {testimonial.review}
+                    </p>
                   </div>
-                  <div className="w-14 h-14 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 border-4 border-white flex items-center justify-center text-white font-bold shadow-lg">
-                    B
-                  </div>
-                  <div className="w-14 h-14 rounded-full bg-gradient-to-br from-pink-400 to-pink-600 border-4 border-white flex items-center justify-center text-white font-bold shadow-lg">
-                    C
-                  </div>
-                  <div className="w-14 h-14 rounded-full bg-gradient-to-br from-indigo-400 to-indigo-600 border-4 border-white flex items-center justify-center text-white font-bold shadow-lg">
-                    D
-                  </div>
-                  <div className="w-14 h-14 rounded-full bg-gradient-to-br from-teal-400 to-teal-600 border-4 border-white flex items-center justify-center text-white font-bold shadow-lg">
-                    E
-                  </div>
-                </div>
-              </div>
 
-              {/* 200k+ Badge */}
-              <div className="mt-6 bg-gradient-to-r from-purple-600 to-blue-600 rounded-full px-8 py-4 shadow-2xl">
-                <div className="text-center">
-                  <div className="text-4xl font-bold text-white mb-1">200k+</div>
-                  <div className="text-sm text-white/90 font-medium">Happy Users</div>
-                </div>
-              </div>
-            </div>
-
-            {/* Description Text */}
-            <div className="max-w-md text-center lg:text-left mt-8">
-              <p className="text-gray-600 text-lg leading-relaxed">
-                Join thousands of satisfied users who trust our AI-powered background removal service for their creative and business needs.
-              </p>
-              <div className="mt-6 flex items-center justify-center lg:justify-start gap-2">
-                <div className="flex">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <Star
-                      key={star}
-                      className="w-5 h-5 fill-yellow-400 text-yellow-400"
+                  {/* Customer Info */}
+                  <div className="flex flex-col">
+                    <img
+                      src={testimonial.avatar}
+                      alt={testimonial.name}
+                      className="h-10 w-10 rounded-full border-2 border-purple-200"
                     />
-                  ))}
+                    <p className="pt-2 text-sm font-semibold text-gray-900">
+                      {testimonial.name}
+                    </p>
+                    <p className="text-xs font-medium text-gray-600">
+                      {testimonial.role}
+                    </p>
+                  </div>
                 </div>
-                <span className="text-gray-700 font-semibold">5.0 Rating</span>
-              </div>
+              ))}
             </div>
           </div>
 
-          {/* Right Side - Testimonials Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {testimonials.map((testimonial, index) => (
-              <div
-                key={index}
-                className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 border border-gray-100 hover:border-purple-200 hover:-translate-y-1"
-              >
-                {/* Star Rating */}
-                <div className="flex gap-1 mb-4">
-                  {Array.from({ length: testimonial.rating }).map((_, i) => (
-                    <Star
-                      key={i}
-                      className="w-5 h-5 fill-yellow-400 text-yellow-400"
-                    />
-                  ))}
-                </div>
+          {/* Navigation Buttons */}
+          <div className="flex items-center gap-4">
+            <button
+              onClick={handlePrevious}
+              className="w-12 h-12 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 text-white flex items-center justify-center shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110"
+              aria-label="Previous testimonial"
+            >
+              <ChevronLeft className="w-6 h-6" />
+            </button>
+            <button
+              onClick={handleNext}
+              className="w-12 h-12 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 text-white flex items-center justify-center shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110"
+              aria-label="Next testimonial"
+            >
+              <ChevronRight className="w-6 h-6" />
+            </button>
+          </div>
+        </div>
 
-                {/* Review Text */}
-                <p className="text-gray-700 text-sm leading-relaxed mb-4">
+        {/* Desktop: Staggered Grid */}
+        <div className="hidden lg:grid grid-cols-5 gap-5 w-full">
+          {testimonials.map((testimonial, index) => (
+            <div
+              key={index}
+              className={`border-2 p-7 rounded-2xl bg-white/80 backdrop-blur-sm shadow-lg border-purple-200/50 flex flex-col gap-y-10 justify-between transition-all duration-700 hover:-translate-y-2 hover:shadow-xl hover:border-purple-400/50 ${
+                testimonial.colSpan
+              } ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'}`}
+              style={{ transitionDelay: `${index * 100}ms` }}
+            >
+              {/* Review Content */}
+              <div className="flex flex-col gap-y-3.5">
+                <p className="font-bold text-xl text-gray-900">
+                  {testimonial.title}
+                </p>
+                <p className="font-medium text-gray-700 leading-relaxed">
                   {testimonial.review}
                 </p>
-
-                {/* User Name */}
-                <div className="pt-4 border-t border-gray-100">
-                  <p className="font-semibold text-gray-900">{testimonial.name}</p>
-                </div>
               </div>
-            ))}
-          </div>
+
+              {/* Customer Info */}
+              <div className="flex flex-col">
+                <img
+                  src={testimonial.avatar}
+                  alt={testimonial.name}
+                  className="h-10 w-10 rounded-full border-2 border-purple-200"
+                />
+                <p className="pt-2 text-sm font-semibold text-gray-900">
+                  {testimonial.name}
+                </p>
+                <p className="text-sm font-medium text-gray-600">
+                  {testimonial.role}
+                </p>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </section>

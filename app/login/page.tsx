@@ -1,19 +1,35 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import Link from "next/link";
+import Image from "next/image";
+import { Eye, EyeOff } from "lucide-react";
 
-export default function LoginPage() {
+function LoginContent() {
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [otp, setOtp] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
   const [otpSent, setOtpSent] = useState(false);
+  const [usePassword, setUsePassword] = useState(true); // Default to password login
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const message = searchParams.get("message");
+    if (message === "email_verified") {
+      setSuccessMessage("Email verified! Please set up a password below to complete your account.");
+    } else if (message === "email_verified_existing") {
+      setSuccessMessage("Email verified! Please sign in with your password or use Google.");
+    }
+  }, [searchParams]);
 
   const handleGoogleLogin = async () => {
     try {
@@ -31,6 +47,42 @@ export default function LoginPage() {
     }
   };
 
+  const handlePasswordLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!email || !password) {
+      setError("Please enter your email and password");
+      return;
+    }
+
+    setIsLoading(true);
+    setError("");
+
+    await authClient.signIn.email({
+      email,
+      password,
+      callbackURL: "/",
+    }, {
+      onSuccess: () => {
+        // Force a full page reload to ensure session is loaded properly
+        window.location.href = "/";
+      },
+      onError: (ctx) => {
+        console.error("Password login error:", ctx.error);
+
+        const errorMessage = ctx.error.message || "";
+        if (errorMessage.toLowerCase().includes("invalid") || errorMessage.toLowerCase().includes("credential")) {
+          setError("Invalid email or password. Please try again.");
+        } else if (errorMessage.toLowerCase().includes("not found") || errorMessage.toLowerCase().includes("user")) {
+          setError("No account found with this email. Try signing up or use Google login.");
+        } else {
+          setError(errorMessage || "Failed to sign in. Please try again.");
+        }
+        setIsLoading(false);
+      },
+    });
+  };
+
   const handleSendOTP = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -39,34 +91,24 @@ export default function LoginPage() {
       return;
     }
 
-    try {
-      setIsLoading(true);
-      setError("");
+    setIsLoading(true);
+    setError("");
 
-      const response = await fetch("/api/auth/send-otp", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, type: "login" }),
-      });
+    // Use Better Auth emailOTP plugin to send OTP
+    const { data, error } = await authClient.emailOtp.sendVerificationOtp({
+      email,
+      type: "sign-in", // Use "sign-in" type (allows auto-signup if user doesn't exist)
+    });
 
-      const data = await response.json();
+    setIsLoading(false);
 
-      if (!response.ok) {
-        if (response.status === 404) {
-          // User doesn't exist
-          setError(data.error);
-          return;
-        }
-        throw new Error(data.error || "Failed to send OTP");
-      }
-
-      setOtpSent(true);
-    } catch (err: any) {
-      console.error("Send OTP error:", err);
-      setError(err.message || "Failed to send OTP");
-    } finally {
-      setIsLoading(false);
+    if (error) {
+      console.error("Send OTP error:", error);
+      setError(error.message || "Failed to send OTP");
+      return;
     }
+
+    setOtpSent(true);
   };
 
   const handleVerifyOTP = async (e: React.FormEvent) => {
@@ -77,38 +119,34 @@ export default function LoginPage() {
       return;
     }
 
-    try {
-      setIsLoading(true);
-      setError("");
+    setIsLoading(true);
+    setError("");
 
-      const response = await fetch("/api/auth/verify-otp", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, otp }),
-      });
+    // Use Better Auth signIn.emailOtp to verify and sign in
+    await authClient.signIn.emailOtp({
+      email,
+      otp,
+    }, {
+      onSuccess: () => {
+        console.log("✅ OTP Verification successful! Session created.");
+        setIsLoading(false);
+        // Force a full page reload to ensure session is loaded properly
+        window.location.href = "/";
+      },
+      onError: (ctx) => {
+        console.error("Verify OTP error:", ctx.error);
+        const errorMessage = ctx.error.message || "";
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Invalid OTP");
-      }
-
-      // OTP verified and session created successfully
-      console.log("Login successful, redirecting to home...");
-      console.log("Response data:", data);
-
-      // Longer delay to ensure cookie is properly set
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      // Force a full page reload to pick up the new session
-      console.log("Redirecting to home page...");
-      window.location.href = "/";
-    } catch (err: any) {
-      console.error("Verify OTP error:", err);
-      setError(err.message || "Failed to verify OTP");
-    } finally {
-      setIsLoading(false);
-    }
+        if (errorMessage.toLowerCase().includes("invalid") || errorMessage.toLowerCase().includes("otp")) {
+          setError("Invalid verification code. Please try again.");
+        } else if (errorMessage.toLowerCase().includes("expired")) {
+          setError("Verification code has expired. Please request a new one.");
+        } else {
+          setError(errorMessage || "Failed to verify code");
+        }
+        setIsLoading(false);
+      },
+    });
   };
 
   if (otpSent) {
@@ -116,8 +154,22 @@ export default function LoginPage() {
       <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50 flex items-center justify-center p-3 sm:p-4">
         <div className="max-w-md w-full bg-white rounded-2xl sm:rounded-3xl shadow-2xl p-6 sm:p-8">
           <div className="text-center mb-6 sm:mb-8">
-            <Link href="/" className="inline-block">
-              <h1 className="text-3xl sm:text-4xl font-bold text-primary mb-2">RemBG</h1>
+            <Link href="/" className="inline-flex items-center gap-3 mb-4">
+              <Image
+                src="/rembg_photo_2025-11-17_13-29-10_2025-11-17_07-59-47_isnet.png"
+                alt="RemBG Logo"
+                width={48}
+                height={48}
+                className="w-10 h-10 sm:w-12 sm:h-12 object-contain"
+              />
+              <div className="flex flex-col">
+                <span className="text-lg sm:text-xl font-bold text-gray-900 leading-tight">
+                  RemBG
+                </span>
+                <span className="text-xs sm:text-sm text-gray-500 leading-tight">
+                  by GoStudio.ai
+                </span>
+              </div>
             </Link>
             <h2 className="text-xl sm:text-2xl font-bold text-gray-900">
               Enter Verification Code
@@ -199,11 +251,32 @@ export default function LoginPage() {
       <div className="max-w-md w-full bg-white rounded-2xl sm:rounded-3xl shadow-2xl p-6 sm:p-8">
         {/* Header */}
         <div className="text-center mb-6 sm:mb-8">
-          <Link href="/" className="inline-block">
-            <h1 className="text-3xl sm:text-4xl font-bold text-primary mb-2">RemBG</h1>
+          <Link href="/" className="inline-flex items-center gap-3 mb-3">
+            <Image
+              src="/rembg_photo_2025-11-17_13-29-10_2025-11-17_07-59-47_isnet.png"
+              alt="RemBG Logo"
+              width={48}
+              height={48}
+              className="w-10 h-10 sm:w-12 sm:h-12 object-contain"
+            />
+            <div className="flex flex-col">
+              <span className="text-lg sm:text-xl font-bold text-gray-900 leading-tight">
+                RemBG
+              </span>
+              <span className="text-xs sm:text-sm text-gray-500 leading-tight">
+                by GoStudio.ai
+              </span>
+            </div>
           </Link>
           <p className="text-sm sm:text-base text-gray-600">Welcome back! Sign in to continue</p>
         </div>
+
+        {/* Success Message */}
+        {successMessage && (
+          <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-green-50 border border-green-200 rounded-lg">
+            <p className="text-xs sm:text-sm text-green-700">{successMessage}</p>
+          </div>
+        )}
 
         {/* Error Message */}
         {error && (
@@ -240,32 +313,122 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* Email Login Form */}
-        <form onSubmit={handleSendOTP} className="space-y-3 sm:space-y-4">
-          <div>
-            <label htmlFor="email" className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
-              Email address
-            </label>
-            <Input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
-              required
-              disabled={isLoading}
-              className="h-11 sm:h-12 text-sm sm:text-base"
-            />
-          </div>
-
-          <Button
-            type="submit"
-            disabled={isLoading}
-            className="w-full h-11 sm:h-12 text-sm sm:text-base font-semibold"
+        {/* Method Toggle */}
+        <div className="flex gap-2 mb-4">
+          <button
+            type="button"
+            onClick={() => setUsePassword(true)}
+            className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors ${
+              usePassword
+                ? "bg-purple-600 text-white"
+                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+            }`}
           >
-            {isLoading ? "Sending code..." : "Send Verification Code"}
-          </Button>
-        </form>
+            Password
+          </button>
+          <button
+            type="button"
+            onClick={() => setUsePassword(false)}
+            className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors ${
+              !usePassword
+                ? "bg-purple-600 text-white"
+                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+            }`}
+          >
+            Email Code
+          </button>
+        </div>
+
+        {/* Email Login Form */}
+        {usePassword ? (
+          <form onSubmit={handlePasswordLogin} className="space-y-3 sm:space-y-4">
+            <div>
+              <label htmlFor="email" className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
+                Email address
+              </label>
+              <Input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@example.com"
+                required
+                disabled={isLoading}
+                className="h-11 sm:h-12 text-sm sm:text-base"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="password" className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
+                Password
+              </label>
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter your password"
+                  required
+                  disabled={isLoading}
+                  className="h-11 sm:h-12 text-sm sm:text-base pr-10"
+                  minLength={8}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                >
+                  {showPassword ? (
+                    <EyeOff className="w-5 h-5" />
+                  ) : (
+                    <Eye className="w-5 h-5" />
+                  )}
+                </button>
+              </div>
+            </div>
+
+            <div className="text-right">
+              <Link href="/forgot-password" className="text-xs sm:text-sm text-primary font-semibold hover:underline">
+                Forgot password?
+              </Link>
+            </div>
+
+            <Button
+              type="submit"
+              disabled={isLoading}
+              className="w-full h-11 sm:h-12 text-sm sm:text-base font-semibold"
+            >
+              {isLoading ? "Signing in..." : "Sign In"}
+            </Button>
+          </form>
+        ) : (
+          <form onSubmit={handleSendOTP} className="space-y-3 sm:space-y-4">
+            <div>
+              <label htmlFor="email-otp" className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
+                Email address
+              </label>
+              <Input
+                id="email-otp"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@example.com"
+                required
+                disabled={isLoading}
+                className="h-11 sm:h-12 text-sm sm:text-base"
+              />
+            </div>
+
+            <Button
+              type="submit"
+              disabled={isLoading}
+              className="w-full h-11 sm:h-12 text-sm sm:text-base font-semibold"
+            >
+              {isLoading ? "Sending code..." : "Send Verification Code"}
+            </Button>
+          </form>
+        )}
 
         {/* Footer */}
         <div className="mt-4 sm:mt-6 text-center text-xs sm:text-sm text-gray-600">
@@ -280,5 +443,20 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-purple-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    }>
+      <LoginContent />
+    </Suspense>
   );
 }
