@@ -37,6 +37,16 @@ const nextConfig = {
         ],
       },
       {
+        // Apply headers for WASM files
+        source: '/(.*)\\.(wasm)$',
+        headers: [
+          {
+            key: 'Cross-Origin-Resource-Policy',
+            value: 'cross-origin',
+          },
+        ],
+      },
+      {
         // Apply CORS headers for WASM functionality
         source: '/(.*)',
         headers: [
@@ -46,7 +56,7 @@ const nextConfig = {
           },
           {
             key: 'Cross-Origin-Embedder-Policy',
-            value: 'require-corp'
+            value: 'credentialless'
           }
         ],
       }
