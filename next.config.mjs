@@ -15,6 +15,28 @@ const nextConfig = {
   async headers() {
     return [
       {
+        // Apply CORS headers for API routes
+        source: '/api/:path*',
+        headers: [
+          {
+            key: 'Access-Control-Allow-Origin',
+            value: '*', // Allow all origins for API routes
+          },
+          {
+            key: 'Access-Control-Allow-Methods',
+            value: 'GET, POST, PUT, DELETE, OPTIONS',
+          },
+          {
+            key: 'Access-Control-Allow-Headers',
+            value: 'Content-Type, Authorization, X-Requested-With',
+          },
+          {
+            key: 'Access-Control-Allow-Credentials',
+            value: 'true',
+          },
+        ],
+      },
+      {
         // Apply CORS headers for WASM functionality
         source: '/(.*)',
         headers: [
@@ -28,6 +50,21 @@ const nextConfig = {
           }
         ],
       }
+    ];
+  },
+  async redirects() {
+    return [
+      {
+        source: '/:path*',
+        has: [
+          {
+            type: 'host',
+            value: 'www.rembg.io',
+          },
+        ],
+        destination: 'https://rembg.io/:path*',
+        permanent: true,
+      },
     ];
   },
   webpack: (config, { isServer, dev }) => {
