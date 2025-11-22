@@ -28,7 +28,7 @@ async function runMigration() {
     const { rows } = await client.query(`
       SELECT table_name
       FROM information_schema.tables
-      WHERE table_schema = 'public'
+      WHERE table_schema = 'rembg'
       AND table_name = 'model_usage_stats'
     `);
 
@@ -40,7 +40,7 @@ async function runMigration() {
     const { rows: columns } = await client.query(`
       SELECT column_name
       FROM information_schema.columns
-      WHERE table_schema = 'public'
+      WHERE table_schema = 'rembg'
       AND table_name = 'credit_transactions'
       AND column_name = 'model_used'
     `);
