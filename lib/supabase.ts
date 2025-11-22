@@ -3,7 +3,12 @@ import { createClient } from "@supabase/supabase-js";
 // Client for client-side operations (uses anon key)
 export const supabaseClient = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  {
+    db: {
+      schema: 'rembg'
+    }
+  }
 );
 
 // Admin client for server-side operations (uses service role key)
@@ -11,6 +16,9 @@ export const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
   {
+    db: {
+      schema: 'rembg'
+    },
     auth: {
       autoRefreshToken: false,
       persistSession: false,
