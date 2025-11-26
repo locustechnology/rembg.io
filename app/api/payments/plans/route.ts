@@ -5,7 +5,7 @@ export async function GET() {
   try {
     // Fetch all active payment plans
     const { data, error } = await supabaseAdmin
-      .from("payment_plans")
+      .from("rembg_payment_plans")
       .select("*")
       .eq("active", true)
       .order("price", { ascending: true });

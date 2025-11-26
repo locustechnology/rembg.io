@@ -21,7 +21,7 @@ export async function GET() {
 
     // Fetch user's credit balance from Supabase
     const { data, error } = await supabaseAdmin
-      .from("credits")
+      .from("rembg_credits")
       .select("balance")
       .eq("userId", session.user.id)
       .single();

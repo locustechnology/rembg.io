@@ -31,7 +31,7 @@ async function testCompleteOTPFlow() {
     // Step 2: Get OTP from database
     console.log('\nStep 2: Retrieving OTP from database');
     const otpQuery = await pool.query(
-      'SELECT * FROM verification WHERE identifier = $1 ORDER BY "createdAt" DESC LIMIT 1',
+      'SELECT * FROM rembg_verification WHERE identifier = $1 ORDER BY "createdAt" DESC LIMIT 1',
       [TEST_EMAIL]
     );
 
@@ -86,7 +86,7 @@ async function testCompleteOTPFlow() {
     // Step 4: Verify session was created in database
     console.log('\nStep 4: Verifying session in database');
     const sessionQuery = await pool.query(
-      'SELECT * FROM session WHERE token = $1',
+      'SELECT * FROM rembg_session WHERE token = $1',
       [sessionToken]
     );
 
@@ -119,7 +119,7 @@ async function testCompleteOTPFlow() {
 
     // Step 6: Cleanup - delete test session
     console.log('\nCleaning up test session...');
-    await pool.query('DELETE FROM session WHERE token = $1', [sessionToken]);
+    await pool.query('DELETE FROM rembg_session WHERE token = $1', [sessionToken]);
     console.log('✅ Cleanup complete');
 
   } catch (error) {

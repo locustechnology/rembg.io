@@ -10,11 +10,11 @@ async function cleanup() {
 
   // Delete from session table first (foreign key constraint)
   const { error: sessionError } = await supabase
-    .from('session')
+    .from('rembg_session')
     .delete()
     .eq('userId', (
       await supabase
-        .from('user')
+        .from('rembg_user')
         .select('id')
         .eq('email', 'neeraj.gmf@gmail.com')
         .single()
@@ -28,11 +28,11 @@ async function cleanup() {
 
   // Delete from credits table
   const { error: creditsError } = await supabase
-    .from('credits')
+    .from('rembg_credits')
     .delete()
     .eq('userId', (
       await supabase
-        .from('user')
+        .from('rembg_user')
         .select('id')
         .eq('email', 'neeraj.gmf@gmail.com')
         .single()
@@ -46,7 +46,7 @@ async function cleanup() {
 
   // Delete user
   const { error: userError } = await supabase
-    .from('user')
+    .from('rembg_user')
     .delete()
     .eq('email', 'neeraj.gmf@gmail.com');
 
@@ -58,7 +58,7 @@ async function cleanup() {
 
   // Delete any pending OTP verifications
   const { error: otpError } = await supabase
-    .from('verification')
+    .from('rembg_verification')
     .delete()
     .eq('identifier', 'neeraj.gmf@gmail.com');
 

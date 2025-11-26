@@ -22,7 +22,7 @@ async function runMigration() {
     // Step 1: Deactivate all existing payment plans (keep for historical data)
     console.log('🔒 Deactivating old payment plans...');
     const { error: deactivateError } = await supabase
-      .from('payment_plans')
+      .from('rembg_payment_plans')
       .update({ active: false })
       .eq('active', true);
 
@@ -71,7 +71,7 @@ async function runMigration() {
     ];
 
     const { data: insertedPlans, error: insertError } = await supabase
-      .from('payment_plans')
+      .from('rembg_payment_plans')
       .insert(newPlans)
       .select();
 
@@ -85,7 +85,7 @@ async function runMigration() {
     // Verify the new plans
     console.log('🔍 Verifying new payment plans...\n');
     const { data: plans, error: plansError } = await supabase
-      .from('payment_plans')
+      .from('rembg_payment_plans')
       .select('*')
       .order('name', { ascending: true })
       .order('price', { ascending: true });

@@ -9,9 +9,9 @@ async function testDatabase() {
   console.log('Testing database connection...\n');
 
   // Test 1: Check if user table exists
-  console.log('1. Checking if "user" table exists...');
+  console.log('1. Checking if "rembg_user" table exists...');
   const { data: userData, error: userError } = await supabase
-    .from('user')
+    .from('rembg_user')
     .select('*')
     .limit(1);
 
@@ -22,9 +22,9 @@ async function testDatabase() {
   }
 
   // Test 2: Check if session table exists
-  console.log('\n2. Checking if "session" table exists...');
+  console.log('\n2. Checking if "rembg_session" table exists...');
   const { data: sessionData, error: sessionError } = await supabase
-    .from('session')
+    .from('rembg_session')
     .select('*')
     .limit(1);
 
@@ -35,9 +35,9 @@ async function testDatabase() {
   }
 
   // Test 3: Check if account table exists
-  console.log('\n3. Checking if "account" table exists...');
+  console.log('\n3. Checking if "rembg_account" table exists...');
   const { data: accountData, error: accountError } = await supabase
-    .from('account')
+    .from('rembg_account')
     .select('*')
     .limit(1);
 
@@ -48,9 +48,9 @@ async function testDatabase() {
   }
 
   // Test 4: Check if credits table exists
-  console.log('\n4. Checking if "credits" table exists...');
+  console.log('\n4. Checking if "rembg_credits" table exists...');
   const { data: creditsData, error: creditsError } = await supabase
-    .from('credits')
+    .from('rembg_credits')
     .select('*')
     .limit(1);
 
@@ -61,9 +61,9 @@ async function testDatabase() {
   }
 
   // Test 5: Check payment_plans
-  console.log('\n5. Checking if "payment_plans" table exists...');
+  console.log('\n5. Checking if "rembg_payment_plans" table exists...');
   const { data: plansData, error: plansError } = await supabase
-    .from('payment_plans')
+    .from('rembg_payment_plans')
     .select('*');
 
   if (plansError) {
@@ -74,9 +74,9 @@ async function testDatabase() {
   }
 
   // Test 6: Check verification table
-  console.log('\n6. Checking if "verification" table exists...');
+  console.log('\n6. Checking if "rembg_verification" table exists...');
   const { data: verificationData, error: verificationError } = await supabase
-    .from('verification')
+    .from('rembg_verification')
     .select('*')
     .limit(5);
 

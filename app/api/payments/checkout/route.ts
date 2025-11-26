@@ -29,7 +29,7 @@ export async function POST(request: Request) {
 
     // Fetch the payment plan from database
     const { data: plan, error: planError } = await supabaseAdmin
-      .from("payment_plans")
+      .from("rembg_payment_plans")
       .select("*")
       .eq("id", planId)
       .eq("active", true)
@@ -84,7 +84,7 @@ export async function POST(request: Request) {
 
     // Create pending purchase record
     const { error: purchaseError} = await supabaseAdmin
-      .from("purchases")
+      .from("rembg_purchases")
       .insert({
         userId: session.user.id,
         planId: planId,

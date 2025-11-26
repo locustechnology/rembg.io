@@ -26,7 +26,7 @@ export async function GET(request: Request) {
 
     // Fetch user's transaction history
     const { data, error, count } = await supabaseAdmin
-      .from("credit_transactions")
+      .from("rembg_credit_transactions")
       .select("*", { count: "exact" })
       .eq("userId", session.user.id)
       .order("createdAt", { ascending: false })
