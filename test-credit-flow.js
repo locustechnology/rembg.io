@@ -17,7 +17,7 @@ async function testCreditFlow() {
     // 1. Get user from database
     console.log('1. Checking user in database...');
     const { rows: [user] } = await client.query(`
-      SELECT id, email FROM "user" WHERE email = $1
+      SELECT id, email FROM rembg_user WHERE email = $1
     `, [testEmail]);
 
     if (!user) {
@@ -29,7 +29,7 @@ async function testCreditFlow() {
     // 2. Get credits from database
     console.log('2. Checking credits in database...');
     const { rows: [dbCredits] } = await client.query(`
-      SELECT balance, "updatedAt" FROM credits WHERE "userId" = $1
+      SELECT balance, "updatedAt" FROM rembg_credits WHERE "userId" = $1
     `, [user.id]);
 
     console.log(`✅ Database credits: ${dbCredits.balance}`);
@@ -49,7 +49,7 @@ async function testCreditFlow() {
     console.log('4. Checking for pending purchases...');
     const { rows: pending } = await client.query(`
       SELECT id, "planId", "dodoPaymentId", amount, "creditsAdded", "createdAt"
-      FROM purchases
+      FROM rembg_purchases
       WHERE "userId" = $1 AND status = 'pending'
       ORDER BY "createdAt" DESC
     `, [user.id]);
@@ -66,7 +66,7 @@ async function testCreditFlow() {
     console.log('5. Latest 3 completed purchases:');
     const { rows: completed } = await client.query(`
       SELECT id, "planId", amount, "creditsAdded", "completedAt"
-      FROM purchases
+      FROM rembg_purchases
       WHERE "userId" = $1 AND status = 'completed'
       ORDER BY "completedAt" DESC
       LIMIT 3
@@ -78,7 +78,7 @@ async function testCreditFlow() {
     console.log('\n6. Latest 3 credit transactions:');
     const { rows: transactions } = await client.query(`
       SELECT type, amount, "balanceAfter", description, "createdAt"
-      FROM credit_transactions
+      FROM rembg_credit_transactions
       WHERE "userId" = $1
       ORDER BY "createdAt" DESC
       LIMIT 3

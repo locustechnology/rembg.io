@@ -34,7 +34,7 @@ export async function POST(request: Request) {
 
     // Get the latest pending purchase for this user and plan
     const { data: purchase, error: purchaseError } = await supabaseAdmin
-      .from("purchases")
+      .from("rembg_purchases")
       .select("*")
       .eq("userId", session.user.id)
       .eq("planId", planId)
@@ -55,7 +55,7 @@ export async function POST(request: Request) {
 
     // Get the payment plan details
     const { data: plan, error: planError } = await supabaseAdmin
-      .from("payment_plans")
+      .from("rembg_payment_plans")
       .select("*")
       .eq("id", planId)
       .single();
@@ -70,7 +70,7 @@ export async function POST(request: Request) {
 
     // Get current credit balance
     const { data: creditData, error: creditError } = await supabaseAdmin
-      .from("credits")
+      .from("rembg_credits")
       .select("balance")
       .eq("userId", session.user.id)
       .single();
@@ -90,7 +90,7 @@ export async function POST(request: Request) {
 
     // Update credit balance
     const { error: updateError } = await supabaseAdmin
-      .from("credits")
+      .from("rembg_credits")
       .update({ balance: newBalance })
       .eq("userId", session.user.id);
 
@@ -104,7 +104,7 @@ export async function POST(request: Request) {
 
     // Log the transaction
     const { error: transactionError } = await supabaseAdmin
-      .from("credit_transactions")
+      .from("rembg_credit_transactions")
       .insert({
         userId: session.user.id,
         type: "purchase",
@@ -126,7 +126,7 @@ export async function POST(request: Request) {
 
     // Update purchase status
     const { error: purchaseUpdateError } = await supabaseAdmin
-      .from("purchases")
+      .from("rembg_purchases")
       .update({
         status: "completed",
         completedAt: new Date().toISOString(),

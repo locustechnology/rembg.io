@@ -39,7 +39,7 @@ export async function POST(request: Request) {
 
     // 1. Get current balance
     const { data: creditsData, error: fetchError } = await supabaseAdmin
-      .from("credits")
+      .from("rembg_credits")
       .select("balance")
       .eq("userId", userId)
       .single();
@@ -65,7 +65,7 @@ export async function POST(request: Request) {
     const newBalance = currentBalance - amount;
 
     const { error: updateError } = await supabaseAdmin
-      .from("credits")
+      .from("rembg_credits")
       .update({ balance: newBalance })
       .eq("userId", userId);
 
@@ -79,7 +79,7 @@ export async function POST(request: Request) {
 
     // 4. Log transaction
     const { error: logError } = await supabaseAdmin
-      .from("credit_transactions")
+      .from("rembg_credit_transactions")
       .insert({
         userId,
         type: "usage",

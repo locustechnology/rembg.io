@@ -14,7 +14,7 @@ async function updatePaymentPlans() {
 
     // Update Starter plan
     await client.query(`
-      UPDATE payment_plans
+      UPDATE rembg_payment_plans
       SET "dodoProductId" = $1
       WHERE name = 'Starter' AND price = 5.00
     `, ['pdt_CC0BK8AcBiY1y7ZaDU7aL']);
@@ -22,7 +22,7 @@ async function updatePaymentPlans() {
 
     // Update Pro plan
     await client.query(`
-      UPDATE payment_plans
+      UPDATE rembg_payment_plans
       SET "dodoProductId" = $1
       WHERE name = 'Pro' AND price = 9.00
     `, ['pdt_CWlfT9vuJpdXo2vAmxNpR']);
@@ -30,7 +30,7 @@ async function updatePaymentPlans() {
 
     // Update Premium plan
     await client.query(`
-      UPDATE payment_plans
+      UPDATE rembg_payment_plans
       SET "dodoProductId" = $1
       WHERE name = 'Premium' AND price = 19.00
     `, ['pdt_61yyMlLFg6e3kiflzoylL']);
@@ -39,7 +39,7 @@ async function updatePaymentPlans() {
     // Verify updates
     const result = await client.query(`
       SELECT id, name, price, credits, "dodoProductId"
-      FROM payment_plans
+      FROM rembg_payment_plans
       ORDER BY price
     `);
 

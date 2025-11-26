@@ -10,7 +10,7 @@ async function checkSchema() {
   const result = await pool.query(`
     SELECT column_name, data_type, is_nullable, column_default
     FROM information_schema.columns
-    WHERE table_name = 'session'
+    WHERE table_name = 'rembg_session'
     ORDER BY ordinal_position
   `);
 
@@ -28,7 +28,7 @@ async function checkSchema() {
   const userResult = await pool.query(`
     SELECT column_name, data_type, is_nullable, column_default
     FROM information_schema.columns
-    WHERE table_name = 'user'
+    WHERE table_name = 'rembg_user'
     ORDER BY ordinal_position
   `);
 

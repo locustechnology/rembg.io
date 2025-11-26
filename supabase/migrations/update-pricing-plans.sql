@@ -7,18 +7,18 @@ DO $$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.columns
-    WHERE table_name = 'payment_plans' AND column_name = 'billing_interval'
+    WHERE table_name = 'rembg_payment_plans' AND column_name = 'billing_interval'
   ) THEN
-    ALTER TABLE payment_plans ADD COLUMN billing_interval TEXT DEFAULT 'monthly';
+    ALTER TABLE rembg_payment_plans ADD COLUMN billing_interval TEXT DEFAULT 'monthly';
   END IF;
 END $$;
 
 -- First, delete all existing payment plans
-DELETE FROM payment_plans;
+DELETE FROM rembg_payment_plans;
 
 -- Insert new Starter and Premium plans with monthly and yearly options
 -- Starter Pack - Monthly: $5 for 100 credits
-INSERT INTO payment_plans (
+INSERT INTO rembg_payment_plans (
   id,
   name,
   price,
@@ -39,7 +39,7 @@ INSERT INTO payment_plans (
 );
 
 -- Starter Pack - Yearly: $48 for 1,200 credits (20% discount, normally $60)
-INSERT INTO payment_plans (
+INSERT INTO rembg_payment_plans (
   id,
   name,
   price,
@@ -60,7 +60,7 @@ INSERT INTO payment_plans (
 );
 
 -- Premium Pack - Monthly: $10 for 250 credits
-INSERT INTO payment_plans (
+INSERT INTO rembg_payment_plans (
   id,
   name,
   price,
@@ -81,7 +81,7 @@ INSERT INTO payment_plans (
 );
 
 -- Premium Pack - Yearly: $96 for 3,000 credits (20% discount, normally $120)
-INSERT INTO payment_plans (
+INSERT INTO rembg_payment_plans (
   id,
   name,
   price,
