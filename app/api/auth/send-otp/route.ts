@@ -22,7 +22,7 @@ export async function POST(request: Request) {
 
     // Check if user already exists
     const { data: existingUser } = await supabaseAdmin
-      .from("user")
+      .from("rembg_user")
       .select("id, email")
       .eq("email", email)
       .single();
@@ -49,13 +49,13 @@ export async function POST(request: Request) {
 
     // Delete any existing OTPs for this email
     await supabaseAdmin
-      .from("verification")
+      .from("rembg_verification")
       .delete()
       .eq("identifier", email);
 
     // Store OTP in verification table
     const { error: insertError } = await supabaseAdmin
-      .from("verification")
+      .from("rembg_verification")
       .insert({
         id: crypto.randomUUID(),
         identifier: email,

@@ -24,18 +24,50 @@ export async function GET() {
       .from("rembg_credits")
       .select("balance")
       .eq("userId", session.user.id)
-      .single();
+      .maybeSingle();
 
-    if (error) {
-      console.error("Error fetching credits:", error);
-      return NextResponse.json(
-        { error: "Failed to fetch credits" },
-        { status: 500 }
-      );
+    // If no credits record exists, create one with default 5 credits
+    if (error || !data) {
+      console.log("No credits record found, creating one with default 5 credits");
+      
+      // Create credits record with default 5 credits
+      const { data: newCredits, error: createError } = await supabaseAdmin
+        .from("rembg_credits")
+        .insert({
+          userId: session.user.id,
+          balance: 5,
+        })
+        .select("balance")
+        .single();
+
+      if (createError) {
+        console.error("Error creating credits:", createError);
+        return NextResponse.json(
+          { error: "Failed to create credits record" },
+          { status: 500 }
+        );
+      }
+
+      // Log the signup bonus transaction
+      await supabaseAdmin
+        .from("rembg_credit_transactions")
+        .insert({
+          userId: session.user.id,
+          type: "signup_bonus",
+          amount: 5,
+          balanceAfter: 5,
+          description: "Welcome bonus - 5 free credits",
+          metadata: { source: "auto_created" },
+        });
+
+      return NextResponse.json({
+        balance: newCredits?.balance || 5,
+        userId: session.user.id,
+      });
     }
 
     return NextResponse.json({
-      balance: data?.balance || 0,
+      balance: data.balance,
       userId: session.user.id,
     });
   } catch (error) {

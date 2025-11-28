@@ -27,7 +27,7 @@ export const auth = betterAuth({
           from: process.env.FROM_EMAIL!,
           to: [user.email],
           subject: "Reset your RemBG password",
-          reply_to: process.env.REPLY_TO_EMAIL,
+          replyTo: process.env.REPLY_TO_EMAIL,
           html: `
             <!DOCTYPE html>
             <html>
@@ -132,7 +132,7 @@ export const auth = betterAuth({
             from: process.env.FROM_EMAIL!,
             to: [email],
             subject,
-            reply_to: process.env.REPLY_TO_EMAIL,
+            replyTo: process.env.REPLY_TO_EMAIL,
             html: `
               <!DOCTYPE html>
               <html>
@@ -204,7 +204,7 @@ export const auth = betterAuth({
           from: process.env.FROM_EMAIL!,
           to: [user.email],
           subject: "Verify your RemBG account",
-          reply_to: process.env.REPLY_TO_EMAIL,
+          replyTo: process.env.REPLY_TO_EMAIL,
           html: `
             <!DOCTYPE html>
             <html>
