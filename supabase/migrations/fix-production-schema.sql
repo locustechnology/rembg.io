@@ -7,9 +7,9 @@
 -- 1. Ensure trigger exists on rembg_user table
 -- =====================================================
 
--- Drop existing trigger if it exists on wrong table
-DROP TRIGGER IF EXISTS on_user_created ON "user";
+-- Drop existing trigger if it exists on rembg_user table
 DROP TRIGGER IF EXISTS on_user_created ON rembg_user;
+DROP TRIGGER IF EXISTS on_rembg_user_created ON rembg_user;
 
 -- Function to auto-create credits record when user signs up
 CREATE OR REPLACE FUNCTION create_rembg_user_credits()
@@ -92,14 +92,63 @@ CREATE POLICY "Users can insert their own stats"
     WITH CHECK (true); -- Service role bypasses this anyway
 
 -- =====================================================
--- 3. Ensure Better Auth tables exist (if using unprefixed)
--- Better Auth might create user, session, account, verification tables
--- We need to either:
--- a) Create views/synonyms mapping unprefixed to prefixed
--- b) Ensure Better Auth uses prefixed tables
--- c) Create both sets of tables and sync them
--- 
--- For now, we'll create a function to sync data between tables
+-- 3. Create Better Auth tables (if they don't exist)
+-- Better Auth expects user, session, account, verification tables
+-- We'll create them and set up sync triggers to rembg_ tables
+-- =====================================================
+
+-- Create Better Auth user table if it doesn't exist
+CREATE TABLE IF NOT EXISTS "user" (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    email TEXT UNIQUE NOT NULL,
+    "emailVerified" BOOLEAN NOT NULL DEFAULT false,
+    image TEXT,
+    "createdAt" TIMESTAMP NOT NULL DEFAULT NOW(),
+    "updatedAt" TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+-- Create Better Auth session table if it doesn't exist
+CREATE TABLE IF NOT EXISTS session (
+    id TEXT PRIMARY KEY,
+    "expiresAt" TIMESTAMP NOT NULL,
+    token TEXT UNIQUE NOT NULL,
+    "createdAt" TIMESTAMP NOT NULL DEFAULT NOW(),
+    "updatedAt" TIMESTAMP NOT NULL DEFAULT NOW(),
+    "ipAddress" TEXT,
+    "userAgent" TEXT,
+    "userId" TEXT NOT NULL REFERENCES "user"(id) ON DELETE CASCADE
+);
+
+-- Create Better Auth account table if it doesn't exist
+CREATE TABLE IF NOT EXISTS account (
+    id TEXT PRIMARY KEY,
+    "accountId" TEXT NOT NULL,
+    "providerId" TEXT NOT NULL,
+    "userId" TEXT NOT NULL REFERENCES "user"(id) ON DELETE CASCADE,
+    "accessToken" TEXT,
+    "refreshToken" TEXT,
+    "idToken" TEXT,
+    "accessTokenExpiresAt" TIMESTAMP,
+    "refreshTokenExpiresAt" TIMESTAMP,
+    scope TEXT,
+    password TEXT,
+    "createdAt" TIMESTAMP NOT NULL DEFAULT NOW(),
+    "updatedAt" TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+-- Create Better Auth verification table if it doesn't exist
+CREATE TABLE IF NOT EXISTS verification (
+    id TEXT PRIMARY KEY,
+    identifier TEXT NOT NULL,
+    value TEXT NOT NULL,
+    "expiresAt" TIMESTAMP NOT NULL,
+    "createdAt" TIMESTAMP NOT NULL DEFAULT NOW(),
+    "updatedAt" TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+-- =====================================================
+-- 4. Set up sync triggers from Better Auth tables to rembg_ tables
 -- =====================================================
 
 -- Function to sync user from unprefixed to prefixed table
@@ -122,14 +171,107 @@ $$ LANGUAGE plpgsql;
 
 -- Create trigger to sync user table to rembg_user
 -- This ensures when Better Auth creates a user, it's also in rembg_user
-DROP TRIGGER IF EXISTS sync_user_trigger ON "user";
-CREATE TRIGGER sync_user_trigger
-    AFTER INSERT OR UPDATE ON "user"
-    FOR EACH ROW
-    EXECUTE FUNCTION sync_user_to_rembg_user();
+DO $$
+BEGIN
+    IF EXISTS (SELECT FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'user') THEN
+        DROP TRIGGER IF EXISTS sync_user_trigger ON "user";
+        CREATE TRIGGER sync_user_trigger
+            AFTER INSERT OR UPDATE ON "user"
+            FOR EACH ROW
+            EXECUTE FUNCTION sync_user_to_rembg_user();
+    END IF;
+END $$;
+
+-- Function to sync session from unprefixed to prefixed table
+CREATE OR REPLACE FUNCTION sync_session_to_rembg_session()
+RETURNS TRIGGER AS $$
+BEGIN
+    INSERT INTO rembg_session (id, "expiresAt", token, "createdAt", "updatedAt", "ipAddress", "userAgent", "userId")
+    VALUES (NEW.id, NEW."expiresAt", NEW.token, NEW."createdAt", NEW."updatedAt", NEW."ipAddress", NEW."userAgent", NEW."userId")
+    ON CONFLICT (id) DO UPDATE
+    SET "expiresAt" = EXCLUDED."expiresAt",
+        token = EXCLUDED.token,
+        "updatedAt" = EXCLUDED."updatedAt",
+        "ipAddress" = EXCLUDED."ipAddress",
+        "userAgent" = EXCLUDED."userAgent";
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create trigger to sync session table
+DO $$
+BEGIN
+    IF EXISTS (SELECT FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'session') THEN
+        DROP TRIGGER IF EXISTS sync_session_trigger ON session;
+        CREATE TRIGGER sync_session_trigger
+            AFTER INSERT OR UPDATE ON session
+            FOR EACH ROW
+            EXECUTE FUNCTION sync_session_to_rembg_session();
+    END IF;
+END $$;
+
+-- Function to sync account from unprefixed to prefixed table
+CREATE OR REPLACE FUNCTION sync_account_to_rembg_account()
+RETURNS TRIGGER AS $$
+BEGIN
+    INSERT INTO rembg_account (id, "accountId", "providerId", "userId", "accessToken", "refreshToken", "idToken", "accessTokenExpiresAt", "refreshTokenExpiresAt", scope, password, "createdAt", "updatedAt")
+    VALUES (NEW.id, NEW."accountId", NEW."providerId", NEW."userId", NEW."accessToken", NEW."refreshToken", NEW."idToken", NEW."accessTokenExpiresAt", NEW."refreshTokenExpiresAt", NEW.scope, NEW.password, NEW."createdAt", NEW."updatedAt")
+    ON CONFLICT (id) DO UPDATE
+    SET "accountId" = EXCLUDED."accountId",
+        "providerId" = EXCLUDED."providerId",
+        "accessToken" = EXCLUDED."accessToken",
+        "refreshToken" = EXCLUDED."refreshToken",
+        "idToken" = EXCLUDED."idToken",
+        "accessTokenExpiresAt" = EXCLUDED."accessTokenExpiresAt",
+        "refreshTokenExpiresAt" = EXCLUDED."refreshTokenExpiresAt",
+        scope = EXCLUDED.scope,
+        password = EXCLUDED.password,
+        "updatedAt" = EXCLUDED."updatedAt";
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create trigger to sync account table
+DO $$
+BEGIN
+    IF EXISTS (SELECT FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'account') THEN
+        DROP TRIGGER IF EXISTS sync_account_trigger ON account;
+        CREATE TRIGGER sync_account_trigger
+            AFTER INSERT OR UPDATE ON account
+            FOR EACH ROW
+            EXECUTE FUNCTION sync_account_to_rembg_account();
+    END IF;
+END $$;
+
+-- Function to sync verification from unprefixed to prefixed table
+CREATE OR REPLACE FUNCTION sync_verification_to_rembg_verification()
+RETURNS TRIGGER AS $$
+BEGIN
+    INSERT INTO rembg_verification (id, identifier, value, "expiresAt", "createdAt", "updatedAt")
+    VALUES (NEW.id, NEW.identifier, NEW.value, NEW."expiresAt", NEW."createdAt", NEW."updatedAt")
+    ON CONFLICT (id) DO UPDATE
+    SET identifier = EXCLUDED.identifier,
+        value = EXCLUDED.value,
+        "expiresAt" = EXCLUDED."expiresAt",
+        "updatedAt" = EXCLUDED."updatedAt";
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create trigger to sync verification table
+DO $$
+BEGIN
+    IF EXISTS (SELECT FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'verification') THEN
+        DROP TRIGGER IF EXISTS sync_verification_trigger ON verification;
+        CREATE TRIGGER sync_verification_trigger
+            AFTER INSERT OR UPDATE ON verification
+            FOR EACH ROW
+            EXECUTE FUNCTION sync_verification_to_rembg_verification();
+    END IF;
+END $$;
 
 -- =====================================================
--- 4. Create indexes for performance
+-- 5. Create indexes for performance
 -- =====================================================
 
 -- Index on rembg_credits userId for faster lookups
@@ -142,10 +284,27 @@ CREATE INDEX IF NOT EXISTS idx_rembg_credit_transactions_userId ON rembg_credit_
 CREATE INDEX IF NOT EXISTS idx_rembg_user_email ON rembg_user(email);
 
 -- =====================================================
--- 5. Grant necessary permissions
+-- 6. Grant necessary permissions
 -- =====================================================
 
--- Ensure service role has all necessary permissions
+-- Grant permissions on Better Auth tables (if they exist)
+DO $$
+BEGIN
+    IF EXISTS (SELECT FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'user') THEN
+        GRANT ALL ON "user" TO service_role;
+    END IF;
+    IF EXISTS (SELECT FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'session') THEN
+        GRANT ALL ON session TO service_role;
+    END IF;
+    IF EXISTS (SELECT FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'account') THEN
+        GRANT ALL ON account TO service_role;
+    END IF;
+    IF EXISTS (SELECT FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'verification') THEN
+        GRANT ALL ON verification TO service_role;
+    END IF;
+END $$;
+
+-- Ensure service role has all necessary permissions on rembg_ tables
 GRANT ALL ON rembg_user TO service_role;
 GRANT ALL ON rembg_session TO service_role;
 GRANT ALL ON rembg_account TO service_role;
@@ -162,4 +321,7 @@ GRANT ALL ON rembg_model_usage_stats TO service_role;
 
 COMMENT ON FUNCTION create_rembg_user_credits() IS 'Auto-creates credits record when user is inserted into rembg_user table';
 COMMENT ON FUNCTION sync_user_to_rembg_user() IS 'Syncs user data from Better Auth user table to rembg_user table';
+COMMENT ON FUNCTION sync_session_to_rembg_session() IS 'Syncs session data from Better Auth session table to rembg_session table';
+COMMENT ON FUNCTION sync_account_to_rembg_account() IS 'Syncs account data from Better Auth account table to rembg_account table';
+COMMENT ON FUNCTION sync_verification_to_rembg_verification() IS 'Syncs verification data from Better Auth verification table to rembg_verification table';
 
