@@ -10,12 +10,13 @@ export const POST = Webhooks({
       console.log("[WEBHOOK] Payment succeeded - Full payload:", JSON.stringify(payload, null, 2));
 
       // Extract metadata from the payment
-      const { metadata } = payload;
+      const { metadata } = payload.data;
       const userId = metadata?.userId;
       const planId = metadata?.planId;
       const credits = parseInt(metadata?.credits || "0");
 
-      console.log("[WEBHOOK] Extracted metadata:", { userId, planId, credits, paymentId: payload.id });
+      const paymentId = (payload.data as any).id || (payload.data as any).payment_id || (payload.data as any).session_id;
+      console.log("[WEBHOOK] Extracted metadata:", { userId, planId, credits, paymentId });
 
       if (!userId || !planId || !credits) {
         console.error("[WEBHOOK] Missing required metadata:", { userId, planId, credits });
@@ -24,7 +25,7 @@ export const POST = Webhooks({
 
       // Get the payment plan details
       const { data: plan, error: planError } = await supabaseAdmin
-        .from("rembg_payment_plans")
+        .from("payment_plans")
         .select("*")
         .eq("id", planId)
         .single();
@@ -55,7 +56,7 @@ export const POST = Webhooks({
       // Update the purchase with the actual payment_id from webhook
       await supabaseAdmin
         .from("rembg_purchases")
-        .update({ dodoPaymentId: payload.id })
+        .update({ dodoPaymentId: paymentId })
         .eq("id", purchase.id);
 
       // Get current credit balance
@@ -97,7 +98,7 @@ export const POST = Webhooks({
             planId: planId,
             planName: plan.name,
             purchaseId: purchase.id,
-            dodoPaymentId: payload.id,
+            dodoPaymentId: (payload.data as any).id || (payload.data as any).payment_id || (payload.data as any).session_id,
             webhookProcessed: true,
           },
         });
@@ -129,7 +130,7 @@ export const POST = Webhooks({
   onPaymentFailed: async (payload) => {
     console.log("[WEBHOOK] Payment failed:", payload);
 
-    const { metadata } = payload;
+    const { metadata } = payload.data;
     const userId = metadata?.userId;
 
     if (!userId) return;
@@ -142,7 +143,7 @@ export const POST = Webhooks({
         completedAt: new Date().toISOString(),
       })
       .eq("userId", userId)
-      .eq("dodoPaymentId", payload.id);
+      .eq("dodoPaymentId", (payload.data as any).id || (payload.data as any).payment_id || (payload.data as any).session_id);
 
     if (error) {
       console.error("[WEBHOOK] Error updating failed purchase:", error);
@@ -162,6 +163,6 @@ export const POST = Webhooks({
 
   // Catch-all for any webhook event
   onPayload: async (payload) => {
-    console.log("[WEBHOOK] Received webhook event:", payload.event);
+    console.log("[WEBHOOK] Received webhook event:", payload.type);
   },
 });

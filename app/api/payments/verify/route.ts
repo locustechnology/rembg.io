@@ -55,7 +55,7 @@ export async function POST(request: Request) {
 
     // Get the payment plan details
     const { data: plan, error: planError } = await supabaseAdmin
-      .from("rembg_payment_plans")
+      .from("payment_plans")
       .select("*")
       .eq("id", planId)
       .single();
