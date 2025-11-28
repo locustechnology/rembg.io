@@ -268,7 +268,7 @@ export default function HeroSection({
             <ImgComparisonSlider className="w-full h-full focus:outline-none">
               <div slot="first" className="w-full h-full">
                 <img
-                  src="/pexels-kaleef-lawal-1481864847-27897903.jpg"
+                  src="/2bgvaexkdudc238yycjs2ebhh80v.jpg"
                   alt="Original"
                   className="w-full h-full object-cover"
                 />
@@ -289,7 +289,7 @@ export default function HeroSection({
                   }}
                 />
                 <img
-                  src="/bg_removed_pexels-kaleef-lawal-1481864847-27897903.png"
+                  src="/rembg_2bgvaexkdudc238yycjs2ebhh80v_2025-11-28_16-14-54_isnet.png"
                   alt="Background Removed"
                   className="w-full h-full object-contain relative z-10"
                 />

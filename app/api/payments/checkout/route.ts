@@ -29,7 +29,7 @@ export async function POST(request: Request) {
 
     // Fetch the payment plan from database
     const { data: plan, error: planError } = await supabaseAdmin
-      .from("rembg_payment_plans")
+      .from("payment_plans")
       .select("*")
       .eq("id", planId)
       .eq("active", true)
