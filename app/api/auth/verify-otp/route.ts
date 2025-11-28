@@ -29,7 +29,7 @@ export async function POST(request: Request) {
 
     // Find the OTP verification record
     const { data: verification, error: fetchError } = await supabaseAdmin
-      .from("verification")
+      .from("rembg_verification")
       .select("*")
       .eq("identifier", email)
       .eq("value", otp)
@@ -51,7 +51,7 @@ export async function POST(request: Request) {
     if (fetchError || !verification) {
       // Let's check if ANY OTP exists for this email
       const { data: anyOtp } = await supabaseAdmin
-        .from("verification")
+        .from("rembg_verification")
         .select("*")
         .eq("identifier", email)
         .maybeSingle();
@@ -84,7 +84,7 @@ export async function POST(request: Request) {
     if (expiresAt < now) {
       // Delete expired OTP
       await supabaseAdmin
-        .from("verification")
+        .from("rembg_verification")
         .delete()
         .eq("id", verification.id);
 
@@ -96,7 +96,7 @@ export async function POST(request: Request) {
 
     // Check if user already exists
     const { data: existingUser } = await supabaseAdmin
-      .from("user")
+      .from("rembg_user")
       .select("id, email, name")
       .eq("email", email)
       .single();
@@ -112,7 +112,7 @@ export async function POST(request: Request) {
       // New user - create account
       userId = crypto.randomUUID();
       const { error: createUserError } = await supabaseAdmin
-        .from("user")
+        .from("rembg_user")
         .insert({
           id: userId,
           email,
@@ -133,7 +133,7 @@ export async function POST(request: Request) {
 
     // Delete used OTP
     await supabaseAdmin
-      .from("verification")
+      .from("rembg_verification")
       .delete()
       .eq("id", verification.id);
 

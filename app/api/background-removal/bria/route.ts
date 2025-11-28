@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
 
     // 3. Check credit balance
     const { data: creditData, error: creditError } = await supabase
-      .from("credits")
+      .from("rembg_credits")
       .select("balance")
       .eq("userId", userId)
       .single();
@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
 
     // 5. Deduct credits
     const { data: updatedCredits, error: deductError } = await supabase
-      .from("credits")
+      .from("rembg_credits")
       .update({
         balance: creditData.balance - BRIA_CREDIT_COST,
         updatedAt: new Date().toISOString()
@@ -101,7 +101,7 @@ export async function POST(request: NextRequest) {
 
     // 6. Log credit transaction
     const { error: transactionError } = await supabase
-      .from("credit_transactions")
+      .from("rembg_credit_transactions")
       .insert({
         userId,
         type: "usage_premium",
@@ -126,7 +126,7 @@ export async function POST(request: NextRequest) {
 
     // 7. Log usage stats for analytics
     const { error: statsError } = await supabase
-      .from("model_usage_stats")
+      .from("rembg_model_usage_stats")
       .insert({
         user_id: userId,
         model_type: "bria_rmbg_2.0",
@@ -158,7 +158,7 @@ export async function POST(request: NextRequest) {
     try {
       const session = await auth.api.getSession({ headers: await headers() });
       if (session?.user) {
-        await supabase.from("model_usage_stats").insert({
+        await supabase.from("rembg_model_usage_stats").insert({
           user_id: session.user.id,
           model_type: "bria_rmbg_2.0",
           success: false,
