@@ -14,34 +14,30 @@ export const POST = Webhooks({
       const userId = metadata?.userId;
       const planId = metadata?.planId;
       const credits = parseInt(metadata?.credits || "0");
+      const billingInterval = metadata?.billing_interval;
+      const planName = metadata?.planName;
 
-      const paymentId = (payload.data as any).id || (payload.data as any).payment_id || (payload.data as any).session_id;
-      console.log("[WEBHOOK] Extracted metadata:", { userId, planId, credits, paymentId });
+      console.log("[WEBHOOK] Extracted metadata:", { userId, planId, credits, billingInterval, planName, paymentId: payload.id });
 
       if (!userId || !planId || !credits) {
         console.error("[WEBHOOK] Missing required metadata:", { userId, planId, credits });
         return;
       }
 
-      // Get the payment plan details
-      const { data: plan, error: planError } = await supabaseAdmin
-        .from("payment_plans")
-        .select("*")
-        .eq("id", planId)
-        .single();
+      // Define plan details from metadata (no DB lookup needed)
+      const plan = {
+        id: planId,
+        name: planName || 'Unknown Plan',
+        credits: credits,
+        billing_interval: billingInterval || 'unknown'
+      };
 
-      if (planError || !plan) {
-        console.error("[WEBHOOK] Payment plan not found:", planError);
-        return;
-      }
-
-      // Get the pending purchase by userId + planId (most recent)
+      // Get the most recent pending purchase for this user
       // We can't match by dodoPaymentId because checkout stores session_id, webhook sends payment_id
       const { data: purchase, error: purchaseError } = await supabaseAdmin
-        .from("rembg_purchases")
+        .from("purchases")
         .select("*")
         .eq("userId", userId)
-        .eq("planId", planId)
         .eq("status", "pending")
         .order("createdAt", { ascending: false })
         .limit(1)
@@ -55,13 +51,13 @@ export const POST = Webhooks({
 
       // Update the purchase with the actual payment_id from webhook
       await supabaseAdmin
-        .from("rembg_purchases")
-        .update({ dodoPaymentId: paymentId })
+        .from("purchases")
+        .update({ dodoPaymentId: payload.id })
         .eq("id", purchase.id);
 
       // Get current credit balance
       const { data: creditData, error: creditError } = await supabaseAdmin
-        .from("rembg_credits")
+        .from("credits")
         .select("balance")
         .eq("userId", userId)
         .single();
@@ -76,7 +72,7 @@ export const POST = Webhooks({
 
       // Update credit balance
       const { error: updateError } = await supabaseAdmin
-        .from("rembg_credits")
+        .from("credits")
         .update({ balance: newBalance })
         .eq("userId", userId);
 
@@ -87,18 +83,19 @@ export const POST = Webhooks({
 
       // Log the transaction
       const { error: transactionError } = await supabaseAdmin
-        .from("rembg_credit_transactions")
+        .from("credit_transactions")
         .insert({
           userId: userId,
           type: "purchase",
           amount: credits,
           balanceAfter: newBalance,
-          description: `Purchased ${plan.name} plan - ${credits} credits`,
+          description: `Purchased ${plan.name} plan (${plan.billing_interval}) - ${credits} credits`,
           metadata: {
             planId: planId,
             planName: plan.name,
+            billingInterval: plan.billing_interval,
             purchaseId: purchase.id,
-            dodoPaymentId: (payload.data as any).id || (payload.data as any).payment_id || (payload.data as any).session_id,
+            dodoPaymentId: payload.id,
             webhookProcessed: true,
           },
         });
@@ -109,7 +106,7 @@ export const POST = Webhooks({
 
       // Update purchase status
       const { error: purchaseUpdateError } = await supabaseAdmin
-        .from("rembg_purchases")
+        .from("purchases")
         .update({
           status: "completed",
           completedAt: new Date().toISOString(),
@@ -137,13 +134,13 @@ export const POST = Webhooks({
 
     // Update purchase status to failed
     const { error } = await supabaseAdmin
-      .from("rembg_purchases")
+      .from("purchases")
       .update({
         status: "failed",
         completedAt: new Date().toISOString(),
       })
       .eq("userId", userId)
-      .eq("dodoPaymentId", (payload.data as any).id || (payload.data as any).payment_id || (payload.data as any).session_id);
+      .eq("dodoPaymentId", payload.id);
 
     if (error) {
       console.error("[WEBHOOK] Error updating failed purchase:", error);

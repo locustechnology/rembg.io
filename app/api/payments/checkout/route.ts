@@ -3,6 +3,7 @@ import { supabaseAdmin } from "@/lib/supabase";
 import { NextResponse } from "next/server";
 import { headers } from "next/headers";
 import DodoPayments from "dodopayments";
+import { findProductById } from "@/lib/dodo-products";
 
 export async function POST(request: Request) {
   try {
@@ -27,25 +28,13 @@ export async function POST(request: Request) {
       );
     }
 
-    // Fetch the payment plan from database
-    const { data: plan, error: planError } = await supabaseAdmin
-      .from("payment_plans")
-      .select("*")
-      .eq("id", planId)
-      .eq("active", true)
-      .single();
+    // Find the plan from our centralized product configuration
+    const plan = findProductById(planId);
 
-    if (planError || !plan) {
+    if (!plan) {
       return NextResponse.json(
         { error: "Invalid plan selected" },
         { status: 404 }
-      );
-    }
-
-    if (!plan.dodoProductId) {
-      return NextResponse.json(
-        { error: "Payment plan not properly configured" },
-        { status: 500 }
       );
     }
 
@@ -59,7 +48,7 @@ export async function POST(request: Request) {
     const checkoutSession = await dodoClient.checkoutSessions.create({
       product_cart: [
         {
-          product_id: plan.dodoProductId,
+          product_id: plan.id,
           quantity: 1,
         },
       ],
@@ -72,6 +61,8 @@ export async function POST(request: Request) {
         userId: session.user.id,
         planId: planId,
         credits: plan.credits.toString(),
+        billing_interval: plan.billing_interval,
+        planName: plan.name,
       },
     });
 
@@ -84,10 +75,10 @@ export async function POST(request: Request) {
 
     // Create pending purchase record
     const { error: purchaseError} = await supabaseAdmin
-      .from("rembg_purchases")
+      .from("purchases")
       .insert({
         userId: session.user.id,
-        planId: planId,
+        planId: null, // Not using DB plan ID anymore
         dodoPaymentId: checkoutSession.session_id,
         status: "pending",
         amount: plan.price,

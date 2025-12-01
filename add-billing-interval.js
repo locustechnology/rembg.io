@@ -7,12 +7,12 @@ const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 async function addBillingIntervalColumn() {
-  console.log('🚀 Adding billing_interval column to payment_plans table...\n');
+  console.log('🚀 Adding billing_interval column to rembg_payment_plans table...\n');
 
   // Since we can't execute raw SQL, we'll use Supabase API to check and add
   // First, let's try to update a record with billing_interval to see if it exists
   const { data: testPlans } = await supabase
-    .from('payment_plans')
+    .from('rembg_payment_plans')
     .select('*')
     .limit(1);
 
@@ -20,7 +20,7 @@ async function addBillingIntervalColumn() {
     console.log('✅ Column already exists or will be added via Supabase dashboard\n');
     console.log('📋 Please manually add the billing_interval column via Supabase Dashboard:');
     console.log('   1. Go to https://supabase.com/dashboard');
-    console.log('   2. Navigate to Table Editor → payment_plans');
+    console.log('   2. Navigate to Table Editor → rembg_payment_plans');
     console.log('   3. Add new column:');
     console.log('      - Name: billing_interval');
     console.log('      - Type: text');

@@ -24,7 +24,7 @@ async function completeAllPendingPurchases() {
         u.email
       FROM purchases p
       LEFT JOIN "user" u ON p."userId" = u.id
-      LEFT JOIN payment_plans pl ON p."planId" = pl.id
+      LEFT JOIN rembg_payment_plans pl ON p."planId" = pl.id
       WHERE p.status = 'pending'
       ORDER BY p."createdAt" ASC
     `);

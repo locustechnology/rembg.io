@@ -13,9 +13,8 @@ interface PaymentPlan {
   name: string;
   price: number;
   credits: number;
-  description: string | null;
-  dodoProductId: string | null;
-  active: boolean;
+  description: string;
+  billing_interval: 'monthly' | 'annually';
 }
 
 export default function PricingPage() {
@@ -26,11 +25,11 @@ export default function PricingPage() {
   const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'annually'>('monthly');
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
 
-  // Fetch payment plans from API
+  // Fetch payment plans from API based on billing period
   useEffect(() => {
     async function fetchPlans() {
       try {
-        const response = await fetch("/api/payments/plans");
+        const response = await fetch(`/api/payments/plans?billing_interval=${billingPeriod}`);
         const data = await response.json();
         setPlans(data.plans || []);
       } catch (error) {
@@ -41,7 +40,7 @@ export default function PricingPage() {
       }
     }
     fetchPlans();
-  }, []);
+  }, [billingPeriod]);
 
   const handleSelectPlan = async (planId: string, planPrice: number) => {
     if (!session?.user) {
@@ -79,37 +78,26 @@ export default function PricingPage() {
     }
   };
 
-  // Filter plans by billing period
-  const getFilteredPlans = () => {
-    return plans.filter(plan => {
-      if (billingPeriod === 'annually') {
-        return plan.name.includes('Yearly');
-      } else {
-        return !plan.name.includes('Yearly');
-      }
-    });
-  };
+  // Plans are already filtered by the API call based on billing period
+  const filteredPlans = plans;
 
-  const filteredPlans = getFilteredPlans();
-
-  // Calculate savings for yearly plans
+  // Calculate savings for annual plans
   const getSavingsPercentage = (plan: PaymentPlan) => {
-    if (!plan.name.includes('Yearly')) return 0;
-
-    const baseName = plan.name.replace(' Yearly', '');
-    const monthlyPlan = plans.find(p => p.name === baseName && !p.name.includes('Yearly'));
-
+    if (plan.billing_interval !== 'annually') return 0;
+    
+    // Find the corresponding monthly plan
+    const monthlyPlans = plans.filter(p => p.billing_interval === 'monthly');
+    const monthlyPlan = monthlyPlans.find(p => p.name === plan.name);
+    
     if (monthlyPlan) {
       const monthlyTotal = monthlyPlan.price * 12;
       const savings = ((monthlyTotal - plan.price) / monthlyTotal) * 100;
       return Math.round(savings);
     }
-    return 20; // Default 20% savings
+    return 0; // No savings if no matching monthly plan
   };
 
-  const getPlanFeatures = (planName: string, credits: number) => {
-    const baseName = planName.replace(' Yearly', '');
-
+  const getPlanFeatures = (planName: string, credits: number, billingInterval: string) => {
     const featuresMap: { [key: string]: string[] } = {
       'Starter': [
         'Free model (ISNet) - unlimited use',
@@ -129,13 +117,15 @@ export default function PricingPage() {
       ],
     };
 
-    return featuresMap[baseName] || [
-      `${credits} credits included`,
+    const baseFeatures = featuresMap[planName] || [
+      `${credits} credits ${billingInterval === 'annually' ? 'per year' : 'per month'}`,
       'Free model - unlimited use',
       'Superior model - 2 credits/image',
       'All output formats',
       'Email support',
     ];
+
+    return baseFeatures;
   };
 
   return (
@@ -239,22 +229,21 @@ export default function PricingPage() {
 
             {/* Paid Plans from API */}
             {filteredPlans.map((plan, index) => {
-              const isPopular = plan.name.includes('Starter');
+              const isPopular = plan.name === 'Starter';
               const savings = getSavingsPercentage(plan);
-              const baseName = plan.name.replace(' Yearly', '');
 
-              // Calculate monthly price for yearly plans
-              const displayPrice = plan.name.includes('Yearly')
+              // Display price per month (for annual plans show monthly equivalent)
+              const displayPrice = plan.billing_interval === 'annually'
                 ? (plan.price / 12).toFixed(2)
-                : plan.price;
+                : plan.price.toFixed(2);
 
               return (
                 <div
                   key={plan.id}
                   className="relative bg-white rounded-3xl border-2 border-gray-200 overflow-hidden hover:shadow-xl transition-all duration-300"
                 >
-                  {/* Best Value Badge for Starter plan only */}
-                  {plan.name.includes('Starter') && plan.name.includes('Yearly') && (
+                  {/* Best Value Badge for Starter annual plan */}
+                  {plan.name === 'Starter' && plan.billing_interval === 'annually' && (
                     <div className="absolute top-0 right-0 w-40 h-40 overflow-hidden">
                       <div className="absolute top-7 -right-10 w-56 bg-purple-600 text-white text-center py-1.5 text-xs font-bold transform rotate-45 shadow-md">
                         BEST VALUE
@@ -264,10 +253,10 @@ export default function PricingPage() {
 
                   <div className="p-8">
                     <h3 className="text-2xl font-bold text-gray-900 mb-2">
-                      {baseName}
+                      {plan.name}
                     </h3>
                     <p className="text-gray-600 mb-6">
-                      {plan.name.includes('Premium') ? 'For power users' : 'For regular use'}
+                      {plan.description}
                     </p>
 
                     <div className="mb-8">
@@ -278,14 +267,21 @@ export default function PricingPage() {
                         <span className="text-gray-600">/month</span>
                       </div>
 
-                      {plan.name.includes('Yearly') && (
-                        <p className="text-sm text-gray-500 mt-1">
-                          ${plan.price.toFixed(2)} billed yearly
-                        </p>
+                      {plan.billing_interval === 'annually' && (
+                        <>
+                          <p className="text-sm text-gray-500 mt-1">
+                            ${plan.price.toFixed(2)} billed annually
+                          </p>
+                          {savings > 0 && (
+                            <p className="text-sm text-green-600 font-medium mt-1">
+                              Save {savings}% with annual billing
+                            </p>
+                          )}
+                        </>
                       )}
 
-                      {!plan.name.includes('Yearly') && (
-                        <p className="text-sm text-gray-500 mt-1">Billed once</p>
+                      {plan.billing_interval === 'monthly' && (
+                        <p className="text-sm text-gray-500 mt-1">Billed monthly</p>
                       )}
 
                       <p className="text-sm text-gray-600 mt-3">
@@ -307,7 +303,7 @@ export default function PricingPage() {
                     </Button>
 
                     <ul className="mt-8 space-y-3">
-                      {getPlanFeatures(plan.name, plan.credits).map((feature, i) => (
+                      {getPlanFeatures(plan.name, plan.credits, plan.billing_interval).map((feature, i) => (
                         <li key={i} className="flex items-start gap-3">
                           <Check className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" />
                           <span className="text-gray-700 text-sm">{feature}</span>
