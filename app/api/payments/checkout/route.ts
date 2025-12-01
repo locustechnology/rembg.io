@@ -39,9 +39,21 @@ export async function POST(request: Request) {
     }
 
     // Initialize Dodo Payments client
+    const apiKey = process.env.DODO_PAYMENTS_API_KEY;
+    const environment = (process.env.DODO_PAYMENTS_ENVIRONMENT as "test_mode" | "live_mode") || "test_mode";
+    
+    console.log("Dodo API Key present:", !!apiKey, "Environment:", environment);
+    
+    if (!apiKey) {
+      return NextResponse.json(
+        { error: "Payment service not configured" },
+        { status: 500 }
+      );
+    }
+    
     const dodoClient = new DodoPayments({
-      bearerToken: process.env.DODO_PAYMENTS_API_KEY!,
-      environment: (process.env.DODO_PAYMENTS_ENVIRONMENT as "test_mode" | "live_mode") || "test_mode",
+      bearerToken: apiKey,
+      environment: environment,
     });
 
     // Create checkout session with product_cart (new Dodo API format)
@@ -97,6 +109,15 @@ export async function POST(request: Request) {
 
   } catch (error: any) {
     console.error("Checkout API error:", error);
+    
+    // Better error handling for Dodo Payments API errors
+    if (error.status === 401) {
+      return NextResponse.json(
+        { error: "Payment service authentication failed. Please contact support." },
+        { status: 500 }
+      );
+    }
+    
     return NextResponse.json(
       { error: error.message || "Internal server error" },
       { status: 500 }
