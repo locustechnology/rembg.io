@@ -21,25 +21,8 @@ export async function GET(request: Request) {
       filteredPlans = getDodoProducts();
     }
 
-    // Verify the products exist in Dodo Payments (optional validation)
-    try {
-      const productChecks = await Promise.all(
-        filteredPlans.map(async (plan) => {
-          try {
-            await dodoClient.products.retrieve(plan.id);
-            return plan;
-          } catch (error) {
-            console.error(`Product ${plan.id} not found in Dodo Payments:`, error);
-            return null;
-          }
-        })
-      );
-      
-      filteredPlans = productChecks.filter(plan => plan !== null) as DodoProduct[];
-    } catch (error) {
-      console.warn("Could not validate products with Dodo Payments:", error);
-      // Continue with predefined plans if validation fails
-    }
+    // Skip product validation - it's optional and causing 401 errors
+    console.log("Returning plans without Dodo validation:", filteredPlans.map(p => ({ id: p.id, name: p.name })));
 
     return NextResponse.json({
       plans: filteredPlans,
