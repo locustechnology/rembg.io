@@ -27,7 +27,7 @@ The script will:
 ### Credits System Tables
 - `credits` - User credit balances (default: 5 free credits)
 - `credit_transactions` - Audit log of all credit operations
-- `payment_plans` - Pricing tiers
+- `rembg_payment_plans` - Pricing tiers
 - `purchases` - Purchase history
 
 ## Important Notes

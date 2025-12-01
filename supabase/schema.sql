@@ -6,7 +6,7 @@
 -- Drop existing tables (cascade to remove dependencies)
 DROP TABLE IF EXISTS purchases CASCADE;
 DROP TABLE IF EXISTS credit_transactions CASCADE;
-DROP TABLE IF EXISTS payment_plans CASCADE;
+DROP TABLE IF EXISTS rembg_payment_plans CASCADE;
 DROP TABLE IF EXISTS credits CASCADE;
 DROP TABLE IF EXISTS verification CASCADE;
 DROP TABLE IF EXISTS account CASCADE;
@@ -72,7 +72,7 @@ CREATE TABLE verification (
 -- =====================================================
 
 -- Payment Plans table
-CREATE TABLE payment_plans (
+CREATE TABLE rembg_payment_plans (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL,
     price DECIMAL(10, 2) NOT NULL,
@@ -109,7 +109,7 @@ CREATE TABLE credit_transactions (
 CREATE TABLE purchases (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     "userId" TEXT NOT NULL REFERENCES "user"(id) ON DELETE CASCADE,
-    "planId" UUID REFERENCES payment_plans(id),
+    "planId" UUID REFERENCES rembg_payment_plans(id),
     "dodoPaymentId" TEXT,
     status TEXT NOT NULL CHECK (status IN ('pending', 'completed', 'failed', 'refunded')) DEFAULT 'pending',
     amount DECIMAL(10, 2) NOT NULL,
@@ -135,7 +135,7 @@ CREATE INDEX idx_purchases_status ON purchases(status);
 -- Insert Default Payment Plans
 -- =====================================================
 
-INSERT INTO payment_plans (name, price, credits, description) VALUES
+INSERT INTO rembg_payment_plans (name, price, credits, description) VALUES
     ('Starter', 5.00, 25, 'Perfect for occasional use - 25 credits'),
     ('Pro', 9.00, 50, 'Best value for regular users - 50 credits'),
     ('Premium', 19.00, 125, 'Power users - 125 credits');
@@ -151,12 +151,12 @@ ALTER TABLE account ENABLE ROW LEVEL SECURITY;
 ALTER TABLE verification ENABLE ROW LEVEL SECURITY;
 ALTER TABLE credits ENABLE ROW LEVEL SECURITY;
 ALTER TABLE credit_transactions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE payment_plans ENABLE ROW LEVEL SECURITY;
+ALTER TABLE rembg_payment_plans ENABLE ROW LEVEL SECURITY;
 ALTER TABLE purchases ENABLE ROW LEVEL SECURITY;
 
 -- Payment plans are public (read-only)
 CREATE POLICY "Payment plans are viewable by everyone"
-    ON payment_plans FOR SELECT
+    ON rembg_payment_plans FOR SELECT
     USING (active = true);
 
 -- Users can only read their own data
@@ -229,7 +229,7 @@ CREATE TRIGGER update_account_updated_at BEFORE UPDATE ON account
 CREATE TRIGGER update_credits_updated_at BEFORE UPDATE ON credits
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
-CREATE TRIGGER update_payment_plans_updated_at BEFORE UPDATE ON payment_plans
+CREATE TRIGGER update_rembg_payment_plans_updated_at BEFORE UPDATE ON rembg_payment_plans
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- =====================================================
@@ -242,5 +242,5 @@ COMMENT ON TABLE account IS 'Better Auth account table - stores OAuth provider a
 COMMENT ON TABLE verification IS 'Better Auth verification table - stores email verification tokens';
 COMMENT ON TABLE credits IS 'User credit balances - tracks available credits per user';
 COMMENT ON TABLE credit_transactions IS 'Audit log for all credit operations';
-COMMENT ON TABLE payment_plans IS 'Available pricing plans';
+COMMENT ON TABLE rembg_payment_plans IS 'Available pricing plans';
 COMMENT ON TABLE purchases IS 'User purchase history';

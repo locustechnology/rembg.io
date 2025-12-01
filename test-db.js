@@ -60,14 +60,14 @@ async function testDatabase() {
     console.log('✅ Credits table exists');
   }
 
-  // Test 5: Check payment_plans
+  // Test 5: Check rembg_payment_plans
   console.log('\n5. Checking if "rembg_payment_plans" table exists...');
   const { data: plansData, error: plansError } = await supabase
     .from('rembg_payment_plans')
     .select('*');
 
   if (plansError) {
-    console.error('❌ Error with payment_plans table:', plansError.message);
+    console.error('❌ Error with rembg_payment_plans table:', plansError.message);
   } else {
     console.log('✅ Payment plans table exists');
     console.log(`   Found ${plansData.length} plans:`, plansData.map(p => `${p.name} ($${p.price})`).join(', '));
